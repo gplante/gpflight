@@ -190,7 +190,7 @@ class GPF_CRSF {
         uint8_t CRC8_calculate(uint8_t *, int);
         bool    parseFrame();
 
-        HardwareSerial *serialPort;
+        HardwareSerial *serialPort; //Print -> Stream -> HardwareSerial => [Serial]
         uint8_t frame_length = 0;
         uint8_t frame_type = 0;
 

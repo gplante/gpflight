@@ -24,21 +24,15 @@
 #include "gpf_debug.h"
 
 GPF_CRSF::GPF_CRSF() {
-    //Print -> Stream -> HardwareSerial => [Serial]
-    //devAddr =  GPF_MPU6050_DEFAULT_ADDRESS;
-    //millis_old = millis();        
+    //Rien de spécial dans le constructeur pour le moment    
 }
 
-void GPF_CRSF::initialize(HardwareSerial *p_serialPort) {
-    
+void GPF_CRSF::initialize(HardwareSerial *p_serialPort) {    
     serialPort = p_serialPort;
     serialPort->begin(GPF_CRSF_BAUDRATE, SERIAL_8N1);
-    //serialPort->begin(416666);
-    //serialPort->begin(115200, SERIAL_8N1);
     DEBUG_CRSF_PRINT(F("CRSF:Ouvre port serie..."));
     while (!serialPort) { };
     DEBUG_CRSF_PRINTLN("Ok");
-
     CRC8_createLut(0xD5);
 }
 
