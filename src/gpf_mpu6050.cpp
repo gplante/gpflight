@@ -3,6 +3,10 @@
  * @author Guylain Plante (gplante2@gmail.com)
  * @version 0.1
  * @date 2022-01-06
+ * 
+ *  Code inspiré en grande partie par
+ *  https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/MPU6050
+ * 
  */
  
 #include "Arduino.h"
@@ -28,12 +32,12 @@ void GPF_MPU6050::initialize() {
     setOrientationCalcMode(GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER);
     millis_old = millis();
 
-    #ifdef DEBUG_MPU6050_ENABLED
-     //if (debug_sincePrint > DEBUG_MPU6050_DELAY) {
-      DEBUG_MPU6050_PRINT(F("MPU6050:"));
-      DEBUG_MPU6050_PRINT(F("getDeviceID(): hex:"));
-      DEBUG_MPU6050_PRINT(getDeviceID(), HEX);      
-      DEBUG_MPU6050_PRINTLN();
+    #ifdef DEBUG_GPF_MPU6050_ENABLED
+     //if (debug_sincePrint > DEBUG_GPF_MPU6050_DELAY) {
+      DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
+      DEBUG_GPF_MPU6050_PRINT(F("getDeviceID(): hex:"));
+      DEBUG_GPF_MPU6050_PRINT(getDeviceID(), HEX);      
+      DEBUG_GPF_MPU6050_PRINTLN();
       debug_sincePrint = 0;
      //}
     #endif
@@ -231,8 +235,8 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
     bool b = getMotion6(&accX, &accY, &accZ, &gyrX, &gyrY, &gyrZ);
     if (!b) {
       errCpt1++;
-      DEBUG_MPU6050_PRINT(F("MPU6050:"));
-      DEBUG_MPU6050_PRINTLN(F("***** getMotion6() a retourne false"));
+      DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
+      DEBUG_GPF_MPU6050_PRINTLN(F("***** getMotion6() a retourne false"));
       return;
     }
 
@@ -242,26 +246,26 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
     // Donc au lieu d'obtenir des calculs à Nan on ne fait pas les calculs puis on sort immédiatement de la fonction.
     if (isnan(atan(accX/sqrt(accY2+accZ2)))) {
      errCpt2++;
-     DEBUG_MPU6050_PRINT(F("MPU6050:"));
-     DEBUG_MPU6050_PRINTLN(F("***** NAN return"));     
+     DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
+     DEBUG_GPF_MPU6050_PRINTLN(F("***** NAN return"));     
      return;
     }
 
     if ( (accX == 0) && (accY == 0) && (accZ == 0) && (gyrX == 0) && (gyrY == 0) && (gyrZ == 0)) {
-      DEBUG_MPU6050_PRINT(F("MPU6050:"));
-      DEBUG_MPU6050_PRINTLN(F("***** Tout a zero return"));     
+      DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
+      DEBUG_GPF_MPU6050_PRINTLN(F("***** Tout a zero return"));     
       return;
     }    
     //*** Fin de Condition jamais testée, plus capable de reproduire le problème
 
     if (timeToPrint) {
-      DEBUG_MPU6050_PRINTLN(F("MPU6050:"));
-     DEBUG_MPU6050_PRINT(accX);    DEBUG_MPU6050_PRINT(F(", "));
-     DEBUG_MPU6050_PRINT(accY);    DEBUG_MPU6050_PRINT(F(", "));
-     DEBUG_MPU6050_PRINT(accZ);    DEBUG_MPU6050_PRINT(F(", "));
-     DEBUG_MPU6050_PRINT(gyrX);    DEBUG_MPU6050_PRINT(F(", "));
-     DEBUG_MPU6050_PRINT(gyrY);    DEBUG_MPU6050_PRINT(F(", "));
-     DEBUG_MPU6050_PRINT(gyrZ);    DEBUG_MPU6050_PRINT(F(", "));
+      DEBUG_GPF_MPU6050_PRINTLN(F("MPU6050:"));
+     DEBUG_GPF_MPU6050_PRINT(accX);    DEBUG_GPF_MPU6050_PRINT(F(", "));
+     DEBUG_GPF_MPU6050_PRINT(accY);    DEBUG_GPF_MPU6050_PRINT(F(", "));
+     DEBUG_GPF_MPU6050_PRINT(accZ);    DEBUG_GPF_MPU6050_PRINT(F(", "));
+     DEBUG_GPF_MPU6050_PRINT(gyrX);    DEBUG_GPF_MPU6050_PRINT(F(", "));
+     DEBUG_GPF_MPU6050_PRINT(gyrY);    DEBUG_GPF_MPU6050_PRINT(F(", "));
+     DEBUG_GPF_MPU6050_PRINT(gyrZ);    DEBUG_GPF_MPU6050_PRINT(F(", "));
     }
 
     accX2 = (unsigned long)(accX*accX);
@@ -389,8 +393,8 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
       complementary_filter_0_360_pitch = (complementaryFilterGyroWeight*(complementary_filter_0_360_pitch + gyr_pitch_degree)) + (complementaryFilterAccWeight*(complementary_filter_0_360_pitch + cadranPitchDelta_used));
 
       if (timeToPrint) {
-       //DEBUG_MPU6050_PRINT(F("MPU6050:"));
-       //DEBUG_MPU6050_PRINT(complementary_filter_0_360_pitch,4);     DEBUG_MPU6050_PRINT(F(", ")); 
+       //DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
+       //DEBUG_GPF_MPU6050_PRINT(complementary_filter_0_360_pitch,4);     DEBUG_GPF_MPU6050_PRINT(F(", ")); 
       }
 
       if (complementary_filter_0_360_pitch < 0) {
@@ -472,13 +476,13 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
     }
 
     if (timeToPrint) {
-     DEBUG_MPU6050_PRINT(errCpt1);    DEBUG_MPU6050_PRINT(F(", "));
-     DEBUG_MPU6050_PRINT(errCpt2);    DEBUG_MPU6050_PRINT(F(", "));
-     DEBUG_MPU6050_PRINT(errCpt3);    DEBUG_MPU6050_PRINT(F(", "));
+     DEBUG_GPF_MPU6050_PRINT(errCpt1);    DEBUG_GPF_MPU6050_PRINT(F(", "));
+     DEBUG_GPF_MPU6050_PRINT(errCpt2);    DEBUG_GPF_MPU6050_PRINT(F(", "));
+     DEBUG_GPF_MPU6050_PRINT(errCpt3);    DEBUG_GPF_MPU6050_PRINT(F(", "));
     }
 
     if (timeToPrint) {
-      DEBUG_MPU6050_PRINTLN("eol");
+      DEBUG_GPF_MPU6050_PRINTLN("eol");
     }
 
 }

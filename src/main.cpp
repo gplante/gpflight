@@ -4,36 +4,28 @@
  * @version 0.1
  * @date 2022-01-06 
  * 
- * GPCD project - Stabilisateur de vol pour avion
- * Certaines parties de codes emprumtés de diverses sources dont:
+ * GPFlight - Stabilisateur de vol pour drone
+ * Certaines parties de codes emprumtés de diverses sources dont en voici une liste non exhaustive:  
  * https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/MPU6050
+ * https://github.com/ArduPilot/ardupilot
+ * https://github.com/iNavFlight/inav
+ * https://github.com/betaflight/betaflight
+ * https://github.com/dncoder/crsf-link-tester
+ * https://github.com/PX4/PX4-Autopilot
  *   
  */
 
 #include "Arduino.h"
-//#include "MPU6050.h"
-
 #include <Wire.h>
 #include "I2Cdev.h"
+#include "gpf.h"
 #include "gpf_mpu6050.h"
 #include "gpf_debug.h"
 #include "gpf_crsf.h"
 
+GPF         myGPF;
 GPF_MPU6050 myGPF_MPU6050;
 GPF_CRSF    myGPF_CRSF;
-
-bool          ledState = false;
-unsigned long ledToggleLastTime = 0;
-int16_t       ledToggleDuration = 250; //ms
-
-
-void toggleLed() {
-    if (millis() > (ledToggleLastTime + ledToggleDuration)) {
-     ledState = !ledState;
-     digitalWrite(LED_BUILTIN, ledState);
-     ledToggleLastTime = millis();
-    }    
-}
 
 void setup() {
   
@@ -41,11 +33,13 @@ void setup() {
 
   Serial.begin(115200);  //Port USB
   while (!Serial) { }; //Attend que le port serie Serial (USB) soit prêt
-  DEBUG_PRINTLN("Port serie Serial (USB) ouvert.");
-  DEBUG_PRINTLN("v112");
+  DEBUG_GPF_PRINTLN("Port serie Serial (USB) ouvert.");
+  DEBUG_GPF_PRINTLN("v112");  
 
   Wire.begin();           //La librairie I2Cdev en a besoin
   Wire.setClock(1000000); //Note this is 2.5 times the spec sheet 400 kHz max...
+
+  myGPF.initialize();
 
   myGPF_CRSF.initialize(&Serial1); 
     
@@ -103,35 +97,19 @@ void setup() {
  //myGPF_CRSF.duration_betwen_frame = 0;
 }
 
-bool timeToPrint_2 = false;
-unsigned long millis_timer_timeToprint_2 = 0;
-unsigned long loop_count_2 = 0;
+
 elapsedMillis sincePrint;
 
 void loop() {
-    loop_count_2++;
-    //Serial2.println("A");
+
+    myGPF.iMStartingLoopNow(true);
 
     myGPF_CRSF.readRx();
     if (sincePrint > 1000) {
      sincePrint = 0;     
     }
     
-
-
-    
     myGPF_MPU6050.readSensorsAndDoCalculations();
-/*
-    bool timeToPrint_2 = false;
-    if (millis() >= millis_timer_timeToprint_2 + 1000) {
-      timeToPrint_2 = true;
-      millis_timer_timeToprint_2 = millis();
-    }
-
-    if (timeToPrint_2) {
-     DEBUG_PRINTLN(loop_count_2);
-    }
-  */  
 
     
     //Serial.print(myGPF_MPU6050.complementary_filter_0_360_pitch);     Serial.print(", ");
@@ -180,9 +158,7 @@ void loop() {
     //Serial.print(ecartPitch);     Serial.print(", ");
     //Serial.println("");
     
-    
-    
-    toggleLed();
+    myGPF.toggMainBoardLed();
     //delay(100);
 }
 

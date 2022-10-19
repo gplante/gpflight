@@ -18,16 +18,16 @@
 //< Device address or Sync Byte> <Frame length> <Type><Destination Address> <Origin Address> <Payload> <CRC>
 //
 
-#define GPF_CRSF_BAUDRATE	                         416666    // From TBS doc: Only non-inverted ( regular ) UART is supported in this configuration. The UART runs at 416666baud 8N1 at 3.0 to 3.3V level.
-#define GPF_CRSF_MIN_DURATION_BETWEEN_FRAME	         1000      // (ms) Sert à savoir lorsqu'un nouveau frame commence. Pour le moment il y a environ 6200ms entre chaque frame donc si on ne recoit rien pendans 1000ms on est pas mal sure que c'est un nouveau frame
-#define GPF_CRSF_SYNC_BYTE                           0xC8      // Sync Byte
-#define GPF_CRSF_BYTES_RECEIVED_BUFFER_MAX_LENGTH	 64        // Each CRSF frame is not longer than 64 bytes (including the Sync and CRC bytes).
-                                                               // Broadcast Frames: <Device address or Sync Byte> <Frame length> <Type><Payload> <CRC>
-                                                               //                                       1 byte      1 byte      -- 2 to 62 bytes --
-#define GPF_CRSF_BYTE_POSITION_DEV_ADDRESS_OR_SYNC_BYTE 0         // Device address or Sync Byte
-#define GPF_CRSF_BYTE_POSITION_FRAME_LENGTH             1         // Frame length
-#define GPF_CRSF_BYTE_POSITION_FRAME_TYPE               2         // Frame type
-#define GPF_CRSF_BYTE_POSITION_PAYLOAD                  3         // Payload (Pour les frames de type Broadcast seulement) sinon ce serait 5 pour les frames de type "Extender Header Frame".
+#define GPF_CRSF_BAUDRATE	                              416666 // From TBS doc: Only non-inverted ( regular ) UART is supported in this configuration. The UART runs at 416666baud 8N1 at 3.0 to 3.3V level.
+#define GPF_CRSF_MIN_DURATION_BETWEEN_FRAME	              1000   // (ms) Sert à savoir lorsqu'un nouveau frame commence. Pour le moment il y a environ 6200ms entre chaque frame donc si on ne recoit rien pendans 1000ms on est pas mal sure que c'est un nouveau frame
+#define GPF_CRSF_SYNC_BYTE                                0xC8   // Sync Byte
+#define GPF_CRSF_BYTES_RECEIVED_BUFFER_MAX_LENGTH	      64     // Each CRSF frame is not longer than 64 bytes (including the Sync and CRC bytes).
+                                                                 // Broadcast Frames: <Device address or Sync Byte> <Frame length> <Type><Payload> <CRC>
+                                                                 //                                       1 byte      1 byte      -- 2 to 62 bytes --
+#define GPF_CRSF_BYTE_POSITION_DEV_ADDRESS_OR_SYNC_BYTE   0      // Device address or Sync Byte
+#define GPF_CRSF_BYTE_POSITION_FRAME_LENGTH               1      // Frame length
+#define GPF_CRSF_BYTE_POSITION_FRAME_TYPE                 2      // Frame type
+#define GPF_CRSF_BYTE_POSITION_PAYLOAD                    3      // Payload (Pour les frames de type Broadcast seulement) sinon ce serait 5 pour les frames de type "Extender Header Frame".
 
 #define GPF_CRSF_DEVICE_ADDRESS_BROADCAST_ADDRESS         0x00 // Broadcast address
 #define GPF_CRSF_DEVICE_ADDRESS_CLOUD_AKA_MQTT_BROKER     0x0E // Cloud (a.k.a. MQTT broker)
@@ -119,70 +119,67 @@ typedef enum {
 } device_address_enum;
 */
 
-typedef struct {
- uint8_t up_rssi_ant1;       // Uplink RSSI Ant. 1 ( dBm * -1 )
- uint8_t up_rssi_ant2;       // Uplink RSSI Ant. 2 ( dBm * -1 )
- uint8_t up_link_quality;    // Uplink Package success rate / Link quality ( % )
- int8_t  up_snr;             // Uplink SNR ( dB )
- uint8_t active_antenna;     // number of antenna
- uint8_t rf_profile;         // enum 4fps = 0 , 50fps, 150hz
- uint8_t up_rf_power;        // enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000
-                             // mW, 2000mW, 250mW, 50mW
- uint8_t down_rssi;          // Downlink RSSI ( dBm * -1 )
- uint8_t down_link_quality;  // Downlink Package success rate / Link quality ( % )
- int8_t  down_snr;           // Downlink SNR ( dB )
-} libCrsf_link_statistics_s;
-
-struct __attribute__ ((packed)) crsf_channels_t {
-    unsigned int channel_1  : 11;
-    unsigned int channel_2  : 11;
-    unsigned int channel_3  : 11;
-    unsigned int channel_4  : 11;
-    unsigned int channel_5  : 11;
-    unsigned int channel_6  : 11;
-    unsigned int channel_7  : 11;
-    unsigned int channel_8  : 11;
-    unsigned int channel_9  : 11;
-    unsigned int channel_10 : 11;
-    unsigned int channel_11 : 11;
-    unsigned int channel_12 : 11;
-    unsigned int channel_13 : 11;
-    unsigned int channel_14 : 11;
-    unsigned int channel_15 : 11;
-    unsigned int channel_16 : 11;
-};
-
-struct pwm_channels_t {
-    unsigned int channel_1;
-    unsigned int channel_2;
-    unsigned int channel_3;
-    unsigned int channel_4;
-    unsigned int channel_5;
-    unsigned int channel_6;
-    unsigned int channel_7;
-    unsigned int channel_8;
-    unsigned int channel_9;
-    unsigned int channel_10;
-    unsigned int channel_11;
-    unsigned int channel_12;
-    unsigned int channel_13;
-    unsigned int channel_14;
-    unsigned int channel_15;
-    unsigned int channel_16;
-};
-
 class GPF_CRSF {
+
+    struct libCrsf_link_statistics_s {
+       uint8_t up_rssi_ant1;       // Uplink RSSI Ant. 1 ( dBm * -1 )
+       uint8_t up_rssi_ant2;       // Uplink RSSI Ant. 2 ( dBm * -1 )
+       uint8_t up_link_quality;    // Uplink Package success rate / Link quality ( % )
+       int8_t  up_snr;             // Uplink SNR ( dB )
+       uint8_t active_antenna;     // number of antenna
+       uint8_t rf_profile;         // enum 4fps = 0 , 50fps, 150hz
+       uint8_t up_rf_power;        // enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000
+                                   // mW, 2000mW, 250mW, 50mW
+       uint8_t down_rssi;          // Downlink RSSI ( dBm * -1 )
+       uint8_t down_link_quality;  // Downlink Package success rate / Link quality ( % )
+       int8_t  down_snr;           // Downlink SNR ( dB )
+    };
+
+    struct __attribute__ ((packed)) crsf_channels_t {
+       unsigned int channel_1  : 11;
+       unsigned int channel_2  : 11;
+       unsigned int channel_3  : 11;
+       unsigned int channel_4  : 11;
+       unsigned int channel_5  : 11;
+       unsigned int channel_6  : 11;
+       unsigned int channel_7  : 11;
+       unsigned int channel_8  : 11;
+       unsigned int channel_9  : 11;
+       unsigned int channel_10 : 11;
+       unsigned int channel_11 : 11;
+       unsigned int channel_12 : 11;
+       unsigned int channel_13 : 11;
+       unsigned int channel_14 : 11;
+       unsigned int channel_15 : 11;
+       unsigned int channel_16 : 11;
+    };
+
+    struct pwm_channels_t {
+       unsigned int channel_1;
+       unsigned int channel_2;
+       unsigned int channel_3;
+       unsigned int channel_4;
+       unsigned int channel_5;
+       unsigned int channel_6;
+       unsigned int channel_7;
+       unsigned int channel_8;
+       unsigned int channel_9;
+       unsigned int channel_10;
+       unsigned int channel_11;
+       unsigned int channel_12;
+       unsigned int channel_13;
+       unsigned int channel_14;
+       unsigned int channel_15;
+       unsigned int channel_16;
+    };
+
     public:
         GPF_CRSF();
         void initialize(HardwareSerial *p_serialPort);
         void readRx();
-        
-        unsigned long millis_timer_timeToprint    = 0;
-        uint8_t       bytesReceivedCount          = 0;
-        unsigned long bytesReceivedTotal          = 0;
+        unsigned int getPwmChannelValue(uint8_t);
+
         libCrsf_link_statistics_s link_statistics;
-        crsf_channels_t           crsf_channels;
-        pwm_channels_t            pwm_channels;
         
     private:
         void    reset_bytesReceivedCount_and_buffer();
@@ -191,10 +188,23 @@ class GPF_CRSF {
         bool    parseFrame();
 
         HardwareSerial *serialPort; //Print -> Stream -> HardwareSerial => [Serial]
-        uint8_t frame_length = 0;
-        uint8_t frame_type = 0;
+        uint8_t         frame_length                    = 0;
+        uint8_t         frame_type                      = 0;
+        bool            new_frame_is_about_to_start     = false;
+        elapsedMicros   duration_between_frame          = 0;
+        unsigned long   duration_between_frame_longest  = 0;
+        uint8_t         bytesReceivedCount              = 0;
+        unsigned long   bytesReceivedTotal              = 0;
+        uint8_t         bytesReceivedBuffer[GPF_CRSF_BYTES_RECEIVED_BUFFER_MAX_LENGTH];
+        elapsedMillis   debug_sincePrint;
+        uint8_t         crc8_lut [256];        
+        crsf_channels_t crsf_channels;
+        pwm_channels_t  pwm_channels;
+        
+        unsigned long   device_address_frame_count[GPF_CRSF_DEVICE_ADDRESS_ITEM_COUNT]; //Sert pour dubug seulement
+        unsigned long   frame_type_frame_count[GPF_CRSF_FRAME_TYPE_ITEM_COUNT];         //Sert pour dubug seulement 
 
-        uint8_t       device_address_list[GPF_CRSF_DEVICE_ADDRESS_ITEM_COUNT] = { 
+        uint8_t         device_address_list[GPF_CRSF_DEVICE_ADDRESS_ITEM_COUNT] = {     //Sert pour dubug seulement
             GPF_CRSF_DEVICE_ADDRESS_BROADCAST_ADDRESS         ,
             GPF_CRSF_DEVICE_ADDRESS_CLOUD_AKA_MQTT_BROKER     ,
             GPF_CRSF_DEVICE_ADDRESS_USB_DEVICE                ,
@@ -218,7 +228,7 @@ class GPF_CRSF {
             GPF_CRSF_DEVICE_ADDRESS_PPG_MAIN_BOARD                                                                                         
         }; 
 
-        uint8_t       frame_type_list[GPF_CRSF_FRAME_TYPE_ITEM_COUNT] = { 
+        uint8_t         frame_type_list[GPF_CRSF_FRAME_TYPE_ITEM_COUNT] = {             //Sert pour dubug seulement
             GPF_CRSF_FRAME_TYPE_GPS,
             GPF_CRSF_FRAME_TYPE_GPS_TIME_FRAME,
             GPF_CRSF_FRAME_TYPE_GPS_EXTENDED_FRAME,
@@ -243,17 +253,5 @@ class GPF_CRSF {
             GPF_CRSF_FRAME_TYPE_CRSF_MAVLINK_ENVELOPE,
             GPF_CRSF_FRAME_TYPE_CRSF_MAV_SYS_STATUS_SENSOR
         }; 
-
-        elapsedMicros duration_between_frame          = 0;
-        unsigned long duration_between_frame_longest  = 0;
-
-        int cpt = 0;
-        uint8_t bytesReceivedBuffer[GPF_CRSF_BYTES_RECEIVED_BUFFER_MAX_LENGTH];
-        bool new_frame_is_about_to_start = false;
-        elapsedMillis debug_sincePrint;
-        unsigned long device_address_frame_count[GPF_CRSF_DEVICE_ADDRESS_ITEM_COUNT]; 
-        unsigned long frame_type_frame_count[GPF_CRSF_FRAME_TYPE_ITEM_COUNT]; 
-        uint8_t crc8_lut [256];
-        
         
 };

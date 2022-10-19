@@ -3,6 +3,9 @@
  * @author Guylain Plante (gplante2@gmail.com)
  * @version 0.1
  * @date 2022-01-06 
+ * 
+ * Voir gpf_mpu6050.cpp pour plus d'informations.
+ * 
  */
 
 #include "Arduino.h"
