@@ -475,7 +475,6 @@ float GPF_MPU6050::convert_90_90_to_0_360(float x_or_y_Degree, float z_Degree) {
 }
 
 float GPF_MPU6050::convert_0_360_to_90_90(float degree) {
-
  /* Example
 
  x_or_y_Degree   return
