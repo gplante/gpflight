@@ -38,7 +38,6 @@ gpf_config_struct myConfig;
 GPF          myFc; //My Flight Controller GPFlight
 
 elapsedMillis sinceDummy;   
-unsigned long dummyCpt = 0;
 
 void setup() {
 
@@ -110,8 +109,7 @@ void setup() {
      }
         
     }
-*/
- 
+*/  
 }
 
 
@@ -119,6 +117,7 @@ void loop() {
     static bool isArmed_previous = true;
 
     myFc.iAmStartingLoopNow(true);
+    myFc.debugDisplayLoopStats();
     myFc.myRc.readRx(); //Armé ou non, on va toujours lire la position des sticks
     myFc.myImu.readSensorsAndDoCalculations(); //Armé ou non, on va toujours lire le IMU
 
@@ -149,58 +148,9 @@ void loop() {
       }
 
       myFc.displayAndProcessMenu();
-      
     }
 
-    dummyCpt++;
-
-    //Serial.print(myFc.myImu.complementary_filter_0_360_pitch);     Serial.print(", ");
-
-    //Serial.print(myFc.myImu.convert_0_360_to_90_90(myFc.myImu.complementary_filter_0_360_pitch),4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.convert_0_360_to_90_90(myFc.myImu.complementary_filter_0_360_roll),4);     Serial.print(", ");
-
-    ////Serial.print(myFc.myImu.output_pitch,4);     Serial.print(", ");
-    ////Serial.print(myFc.myImu.output_roll,4);     Serial.print(", ");
-    ////Serial.print(myFc.myImu.complementary_filter_0_360_pitch,4);     Serial.print(", ");
-
-    //Serial.print(myFc.myImu.acc_pitch_degree_0_360,4);     Serial.print(", ");
-    ////Serial.print(myFc.myImu.acc_pitch_degree_0_360_z_normal,4);     Serial.print(", ");
-    ////Serial.print(myFc.myImu.acc_pitch_degree_0_360_z_inversed,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.output_roll,4);     Serial.print(", ");
-    
-    ////Serial.print(myFc.myImu.gyr_pitch_degree,4);     Serial.print(", ");
-    ////Serial.print(myFc.myImu.acc_pitch_degree,4);     Serial.print(", ");
-    ////Serial.print(myFc.myImu.acc_z_degree,4);     Serial.print(", ");
-
-    ////Serial.print(myFc.myImu.complementaryFilterGyroWeight,4);     Serial.print(", ");
-    ////Serial.print(myFc.myImu.complementaryFilterAccWeight,4);     Serial.print(", ");
-
-
-    //Serial.print(myFc.myImu.acc_roll_degree,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.acc_z_degree,4);     Serial.print(", ");
-    
-    //Serial.print(myFc.myImu.acc_z_degree,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.accX,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.accY,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.accZ,4);     Serial.print(", ");
-
-    //Serial.print(myFc.myImu.complementary_filter_0_360_roll,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.acc_roll_degree_0_360,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.acc_pitch_degree,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.acc_roll_degree,4);     Serial.print(", ");
-    //Serial.print(myFc.myImu.acc_z_degree,4);     Serial.print(", ");
-
-    //Serial.print(myFc.myImu.convert_90_90_to_0_360(myFc.myImu.acc_pitch_degree,myFc.myImu.acc_z_degree),4); Serial.print(", ");
-    //Serial.print(myFc.myImu.convert_90_90_to_0_360(myFc.myImu.acc_roll_degree,myFc.myImu.acc_z_degree),4); Serial.print(", ");
-    //Serial.print(myFc.myImu.convert_0_360_to_90_90(myFc.myImu.convert_90_90_to_0_360(myFc.myImu.acc_pitch_degree,myFc.myImu.acc_z_degree)),4); Serial.print(", ");
-    //Serial.print(myFc.myImu.convert_0_360_to_90_90(myFc.myImu.convert_90_90_to_0_360(myFc.myImu.acc_roll_degree,myFc.myImu.acc_z_degree)),4); Serial.print(", ");
-
-    //Serial.print(ecartPitch);     Serial.print(", ");
-    //Serial.println("");
-
-
     //myFc.toggMainBoardLed();
-    //delay(500);
     
 }
 

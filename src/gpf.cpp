@@ -54,43 +54,69 @@ void GPF::initialize(gpf_config_struct *ptr) {
 }
 
 void GPF::iAmStartingLoopNow(bool syncLoop) {
+ /*
+ static int cpt = 0;
+
+ cpt++;
+ if (cpt == 3) {
+  resetLoopStats();
+ }
+ */
+
  if (firstLoopStartedAt == 0) {
      // Uniquement lors de la première loop, on attend le début de la prochaine milliseconde 
      // histoire que nos stats soient le plus précis possible
-     unsigned long us       = micros();
-     unsigned long delay_us = 1000 - (us % 1000);
-     delayMicroseconds(delay_us);
+     //unsigned long current_micros = micros();
+     //unsigned long delay_us = 1000 - (current_micros % 1000);
+     //delayMicroseconds(delay_us);
      firstLoopStartedAt = micros();
  }
+ 
+ loopBusyTime    = micros() - loopStartedAt;
+ loopBusyTimeMin = min(loopBusyTimeMin,loopBusyTime);
+ loopBusyTimeMax = max(loopBusyTimeMax,loopBusyTime);
+ loopFreeTime    = GPF_MAIN_LOOP_RATE - loopBusyTime; 
+
+ if (loopFreeTime < 0) {
+  loopTimeOverFlowCount++;
+ }
+
+ loopBusyTimePercent = (float)(loopBusyTime / (float)GPF_MAIN_LOOP_RATE) * 100.0;
+ loopFreeTimePercent = 100.0 - loopBusyTimePercent;
 
  if (syncLoop) {
-  loopBusyTime        = micros() - loopStartedAt;
-  loopFreeTime        = GPF_MAIN_LOOP_RATE - loopBusyTime;
-  loopBusyTimePercent = (float)(loopBusyTime / (float)GPF_MAIN_LOOP_RATE) * 100.0;
-  loopFreeTimePercent = 100.0 - loopBusyTimePercent;
-  //On attend...
+  //On attend pour que chaque loop commence au même moment
   while ((micros() - loopStartedAt) < GPF_MAIN_LOOP_RATE) {
    //Attend (Dans la mesure du possible, ne jamais  mettre de delay() ou delayMicroseconds() dans un programme!!!)
   }
  } 
 
- loopStartedAt = micros();
- 
+ loopStartedAt = micros(); 
+ loopCount++; 
+}
+
+void GPF::debugDisplayLoopStats() {
  #ifdef DEBUG_GPF_ENABLED 
   if (debug_sincePrint > DEBUG_GPF_DELAY) {
-   DEBUG_GPF_PRINT(F("GPF: loopCount="));
+   DEBUG_GPF_PRINT("GPF: loopCount=");
    DEBUG_GPF_PRINT(loopCount);
    DEBUG_GPF_PRINT(F(" "));
-   DEBUG_GPF_PRINT((float)(1000000 / (((float)(micros() - firstLoopStartedAt))/loopCount)));
-   DEBUG_GPF_PRINT(F("hz loopBusyTime="));
+   DEBUG_GPF_PRINT(getLoopFrequency());
+   DEBUG_GPF_PRINT("hz loopBusyTime=");
    DEBUG_GPF_PRINT(loopBusyTime);
-   DEBUG_GPF_PRINT(F("/"));
+   DEBUG_GPF_PRINT("/");
    DEBUG_GPF_PRINT(GPF_MAIN_LOOP_RATE);
-   DEBUG_GPF_PRINT(F(" loopBusyTimePercent="));
+   DEBUG_GPF_PRINT(" loopBusyTimePercent=");
    DEBUG_GPF_PRINT(loopBusyTimePercent);
-   DEBUG_GPF_PRINT(F("%"));
-   DEBUG_GPF_PRINT(F(" free ram="));
+   DEBUG_GPF_PRINT("%");
+   DEBUG_GPF_PRINT(" free ram=");
    DEBUG_GPF_PRINT(gpf_util_freeRam());
+   DEBUG_GPF_PRINT(" loopBusyTimeMin=");
+   DEBUG_GPF_PRINT(loopBusyTimeMin);
+   DEBUG_GPF_PRINT(" loopBusyTimeMax=");
+   DEBUG_GPF_PRINT(loopBusyTimeMax);
+   DEBUG_GPF_PRINT(" loopTimeOverFlowCount=");
+   DEBUG_GPF_PRINT(loopTimeOverFlowCount);
 
    DEBUG_GPF_PRINTLN();
 
@@ -99,21 +125,22 @@ void GPF::iAmStartingLoopNow(bool syncLoop) {
    //ptrMemoryLeakTest = (byte*)malloc(5000); //Test pour créer un memory leak
   }
  #endif
- 
- loopCount++; 
 }
 
 void GPF::resetLoopStats() {
- firstLoopStartedAt = 0; 
- loopCount = 0; 
+ firstLoopStartedAt    = 0; 
+ loopCount             = 0; 
+ loopBusyTimeMin       = 999999;
+ loopBusyTimeMax       = 0;
+ loopTimeOverFlowCount = 0;
 
  //if (firstLoopStartedAt == 0) {
      // Uniquement lors de la première loop, on attend le début de la prochaine milliseconde 
      // histoire que nos stats soient le plus précis possible
-     unsigned long us       = micros();
-     unsigned long delay_us = 1000 - (us % 1000);
-     delayMicroseconds(delay_us);
-     firstLoopStartedAt = micros();
+     //unsigned long us       = micros();
+     //unsigned long delay_us = 1000 - (us % 1000);
+     //delayMicroseconds(delay_us);
+     //firstLoopStartedAt = micros();
  //}
 
 }
@@ -278,6 +305,118 @@ void GPF::displayArmed() {
   myDisplay.get_tft()->println();    
 }
 
+void GPF::menu_gotoInfoStats(bool firstTime, int not_used_param_2=0, int not_used_param_3=0) {
+  uint16_t charHeight = 0;
+  uint16_t charWidth  = 0;
+  const uint16_t x_pos = 120;
+  static elapsedMillis sincePrint = 1001; //pour que le tout s'affiche tout de suite dès le premier appel de la fonction.
+  const uint16_t sincePrint_delay = 1000;
+
+  if (firstTime) {
+    myDisplay.clearScreen();
+    menu_display_button_Exit();
+    menu_display_button_Save("Reset Sta");
+
+    myDisplay.setTextSize(2);
+    myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+
+    myDisplay.get_tft()->setCursor(0,0);  
+    myDisplay.println("**** Main Loop ****");
+    myDisplay.println("    Count");  
+    myDisplay.println("     Freq");
+    myDisplay.println("Busy Time");
+    myDisplay.println("   Busy %");
+    myDisplay.println("BusyT.Min");
+    myDisplay.println("BusyT.Max");
+    myDisplay.println("OverF Cpt");
+    myDisplay.println(" Free RAM");
+    myDisplay.println("Ver. Prog");
+    myDisplay.println("Ver. Conf");
+    
+  }
+
+  if (sincePrint > sincePrint_delay) {
+    sincePrint = 0;
+    myDisplay.setTextSize(2);
+    myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+
+    myDisplay.get_tft()->setCursor(0,0);  
+    myDisplay.println();
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(loopCount);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.print(getLoopFrequency());
+    myDisplay.println("hz");
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.print(loopBusyTime);
+    myDisplay.print("/");
+    myDisplay.println(GPF_MAIN_LOOP_RATE);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.print(loopBusyTimePercent);
+    myDisplay.println("%");
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(loopBusyTimeMin);    
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(loopBusyTimeMax);    
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(loopTimeOverFlowCount);    
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(gpf_util_freeRam());
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(GPF_MISC_PROG_CURRENT_VERSION);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(GPF_MISC_CONFIG_CURRENT_VERSION);
+    
+
+  }
+
+  boolean istouched = myTouch.ts_touched();
+
+  if (istouched) { //Check si il a cliqué sur bouton "Sortir"
+   TS_Point p = myTouch.ts_getPoint();
+
+   int16_t pixelX = GPF_TOUCH::mapTouchXToPixelX(p.x);
+   int16_t pixelY = GPF_TOUCH::mapTouchYToPixelY(p.y);
+
+   if (button_Exit.contains(pixelX, pixelY)) {
+    DEBUG_GPF_PRINT("On sort de la fonction ");
+    DEBUG_GPF_PRINTLN(__func__);
+    
+    menu_current = gpf_menuItems[GPF_MENU_INFO_STATS].parent_id;
+    menu_pleaseRefresh = true;
+    myTouch.set_waitForUnTouch(true);
+   }
+
+   if (button_Save.contains(pixelX, pixelY)) { //Check si il a cliqué sur bouton "Reset"
+    DEBUG_GPF_PRINT("Reset loop stats");
+    DEBUG_GPF_PRINTLN(__func__);
+    resetLoopStats();
+    sincePrint = 1001; //Pour que ca s'affiche tout de suite au prochain appel de cette fonction. Genre pour ne pas attendre 1 seconde...
+    myTouch.set_waitForUnTouch(true);
+   }
+  }  
+}
+
 void GPF::menu_gotoTestRC(bool firstTime, int not_used_param_2=0, int not_used_param_3=0) {
   uint16_t charHeight = 0;
   uint16_t charWidth  = 0;
@@ -329,8 +468,6 @@ void GPF::menu_gotoTestRC(bool firstTime, int not_used_param_2=0, int not_used_p
 
 }
 
-
-
 void GPF::menu_gotoConfigurationChannels(bool firstTime, int rcStick=0, int not_used_param_3=0) {  
   uint16_t charHeight = 0;
   uint16_t charWidth  = 0;
@@ -380,7 +517,7 @@ void GPF::menu_gotoConfigurationChannels(bool firstTime, int rcStick=0, int not_
       }
     }
 
-    menu_display_button_Save();
+    menu_display_button_Save("Save");
     
   }
 
@@ -444,8 +581,7 @@ void GPF::displayAndProcessMenu() {
   static int menuFunction_param_3 = 0;  
   
   arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) && (false); //todo //Il faut être au menu principal et que la switch Arm soit à Off
-
-  //if (menu_previous != menu_current) {
+  
   if (menu_pleaseRefresh) {
    DEBUG_GPF_PRINT(F("menu_current=")); 
    DEBUG_GPF_PRINTLN(menu_current);
@@ -486,7 +622,12 @@ void GPF::displayAndProcessMenu() {
    }
    
    menu_pleaseRefresh = false;
-  }  
+
+   //Test
+   if (gpf_menuItems[menu_current].id == GPF_MENU_MAIN_MENU) {
+    resetLoopStats();
+   }   
+  }
   
   boolean istouched = myTouch.ts_touched();
   if (istouched) {
@@ -610,13 +751,12 @@ void GPF::displayAndProcessMenu() {
 }
 
 void GPF::menu_display_button_Exit() {
-  //button_Exit.initButton(myDisplay.get_tft(),120,300,236,36,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,"Retour",2);
   button_Exit.initButton(myDisplay.get_tft(),60,300,118,36,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,"Retour",2);
   button_Exit.drawButton();
 }
 
-void GPF::menu_display_button_Save() {  
-  button_Save.initButton(myDisplay.get_tft(),180,300,118,36,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,"Save",2);
+void GPF::menu_display_button_Save(const char *caption) { //Peut servir aussi comme bouton avec un caption différent
+  button_Save.initButton(myDisplay.get_tft(),180,300,118,36,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,caption,2);  
   button_Save.drawButton();
 }
 
@@ -642,7 +782,6 @@ void GPF::saveConfig() {
  DEBUG_GPF_PRINT("Save de la config ");
  DEBUG_GPF_PRINTLN(__func__);
 }
-
 
 void GPF::menu_gotoConfigurationPID(bool firstTime, int axe=0, int pid_term=0) {  
   uint16_t charHeight = 0;
@@ -702,7 +841,7 @@ void GPF::menu_gotoConfigurationPID(bool firstTime, int axe=0, int pid_term=0) {
       }
     }
 
-    menu_display_button_Save();
+    menu_display_button_Save("Save");
     menu_display_button_BackSpace();
     
   }
@@ -954,7 +1093,7 @@ void GPF::menu_gotoCalibrationIMU(bool firstTime, int not_used_param_2=0, int no
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
     myDisplay.println(myImu.calibration_offset_gz);
 
-    menu_display_button_Save();
+    menu_display_button_Save("Save");
     myTouch.set_waitForUnTouch(true);
    }
 
@@ -987,7 +1126,7 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
   uint16_t charHeight = 0;
   uint16_t charWidth  = 0;
   const uint16_t x_pos = 130;
-  static elapsedMillis sincePrint;
+  static elapsedMillis sincePrint = 251; //pour que le tout s'affiche tout de suite dès le premier appel de la fonction.
   const uint16_t sincePrint_delay = 250;
 
   if (firstTime) {
@@ -998,48 +1137,23 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
     myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
     myDisplay.get_tft()->setCursor(0,0);  
-    myDisplay.println("IMU");
+    myDisplay.println(" IMU");
 
-    myDisplay.println("ax ");  
-    //myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    //myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    //myDisplay.println(myImu.accX_with_offsets);
-
-    myDisplay.println("ay ");
-    //myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    //myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    //myDisplay.println(myImu.accY_with_offsets);
-
-    myDisplay.println("az ");
-    //myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    //myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    //myDisplay.println(myImu.accZ_with_offsets);
-
-    myDisplay.println("gx ");
-    //myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    //myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    //myDisplay.println(myImu.gyrX_with_offsets);
-
-    myDisplay.println("gy ");
-    //myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    //myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    //myDisplay.println(myImu.gyrY_with_offsets);
-
-    myDisplay.println("gz ");
-    //myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    //myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    //myDisplay.println(myImu.gyrZ_with_offsets);
-
-    myDisplay.println("pitch deg");
-    //myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    //myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    //myDisplay.println(myImu.output_pitch);
-
-    myDisplay.println("roll deg");
-    //myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    //myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    //myDisplay.println(myImu.output_roll);
-
+    myDisplay.println(" ax");  
+    myDisplay.println(" ay");
+    myDisplay.println(" az");
+    myDisplay.println(" gx");
+    myDisplay.println(" gy");
+    myDisplay.println(" gz");
+    myDisplay.println(" Pitch deg");
+    myDisplay.println("       180");
+    myDisplay.println("       360");
+    myDisplay.println(" Roll deg");
+    myDisplay.println("      180");
+    myDisplay.println("      360");
+    myDisplay.println(" Z deg");
+    myDisplay.println(" Z/pitch");
+    myDisplay.println(" Z/roll");
   }
 
   if (sincePrint > sincePrint_delay) {
@@ -1048,7 +1162,7 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
     myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
     myDisplay.get_tft()->setCursor(0,0);  
-    myDisplay.println("IMU");
+    myDisplay.println();
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
@@ -1076,11 +1190,39 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_pitch);
+    myDisplay.println(myImu.output_pitch_90_90);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_roll);
+    myDisplay.println(myImu.convert_0_360_to_180_180(myImu.output_pitch_0_360));
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.output_pitch_0_360);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.output_roll_90_90);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.convert_0_360_to_180_180(myImu.output_roll_0_360));
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.output_roll_0_360);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.output_z_90_90);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.output_z_0_360_pitch);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.output_z_0_360_roll);
 
   }
 
@@ -1101,7 +1243,7 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
     menu_pleaseRefresh = true;
     myTouch.set_waitForUnTouch(true);
    }
-  }        
+  }
 
 }
 
@@ -1147,4 +1289,32 @@ void GPF::menu_gotoDisplayAllPIDs(bool firstTime, int not_used_param_2=0, int no
    }
   }        
 
+}
+
+float GPF::getLoopFrequency() {
+  float         retour                        = 0;
+  unsigned long current_micros                = micros();
+  unsigned long totalDuration                 = current_micros - firstLoopStartedAt;
+  unsigned long totalDurationTakenIntoAccount = totalDuration - (totalDuration % GPF_MAIN_LOOP_RATE);
+
+  retour = (float)(loopCount-1) * 1000000 / totalDurationTakenIntoAccount;
+  
+/*
+  #ifdef DEBUG_GPF_ENABLED   
+   DEBUG_GPF_PRINT(" current_micros=");
+   DEBUG_GPF_PRINT(current_micros);
+   DEBUG_GPF_PRINT(" totalDuration=");
+   DEBUG_GPF_PRINT(totalDuration);
+   DEBUG_GPF_PRINT(" totalDurationTakenIntoAccount=");
+   DEBUG_GPF_PRINT(totalDurationTakenIntoAccount);
+   DEBUG_GPF_PRINT(" firstLoopStartedAt=");
+   DEBUG_GPF_PRINT(firstLoopStartedAt);
+   DEBUG_GPF_PRINT(" loopCount=");
+   DEBUG_GPF_PRINT(loopCount);
+   DEBUG_GPF_PRINT(" retour=");
+   DEBUG_GPF_PRINT(retour);   
+   DEBUG_GPF_PRINTLN();   
+  #endif
+*/
+  return retour;
 }

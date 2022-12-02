@@ -42,13 +42,15 @@ class GPF {
         void displayArmed();        
 
         void displayAndProcessMenu();
+        void debugDisplayLoopStats();
         void menu_display_button_Exit();
-        void menu_display_button_Save();
+        void menu_display_button_Save(const char *caption); //Peut servir aussi comme bouton avec un caption différent
         void menu_display_button_BackSpace();
         void menu_display_button_Start();
         void menu_display_button_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 
         void menu_gotoTestTouchScreen(bool, int, int);        
+        void menu_gotoInfoStats(bool, int, int);
         void menu_gotoTestRC(bool, int, int);
         void menu_gotoTestImu(bool, int, int);
         void menu_gotoConfigurationChannels(bool, int, int);
@@ -75,11 +77,15 @@ class GPF {
 
     private:
         elapsedMillis debug_sincePrint;
-        unsigned long loopCount           = 0;
-        unsigned long loopStartedAt       = 0; //us
-        unsigned long firstLoopStartedAt  = 0; //us
-        unsigned long loopFreeTime        = 0; //us
-        unsigned long loopBusyTime        = 0; //us
+        unsigned long loopCount             = 0;
+        unsigned long loopStartedAt         = 0; //us
+        unsigned long firstLoopStartedAt    = 0; //us
+                 long loopFreeTime          = 0; //us
+                 long loopBusyTime          = 0; //us
+                 long loopBusyTimeMin       = 999999; //us
+                 long loopBusyTimeMax       = 0; //us 
+        unsigned long loopTimeOverFlowCount = 0; 
+
         float         loopFreeTimePercent = 0.0; 
         float         loopBusyTimePercent = 0.0; 
 
@@ -95,6 +101,8 @@ class GPF {
         gpf_menu_item_struct gpf_menuItems[GPF_MENU_ITEM_COUNT] = 
            { 
               { GPF_MENU_MAIN_MENU, 0, ""}, 
+                 { GPF_MENU_INFO_MENU, GPF_MENU_MAIN_MENU, "Info/Stats",NULL},
+                    { GPF_MENU_INFO_STATS, GPF_MENU_INFO_MENU, "Statistiques",&GPF::menu_gotoInfoStats},
                  { GPF_MENU_TEST_MENU, GPF_MENU_MAIN_MENU, "Tests",NULL},
                     { GPF_MENU_TEST_RC, GPF_MENU_TEST_MENU, "Test RC",&GPF::menu_gotoTestRC},
                     { GPF_MENU_TEST_IMU, GPF_MENU_TEST_MENU, "Test IMU",&GPF::menu_gotoTestImu},
@@ -125,6 +133,7 @@ class GPF {
            };
 
          void saveConfig();  
+         float getLoopFrequency();
                 
 };
 

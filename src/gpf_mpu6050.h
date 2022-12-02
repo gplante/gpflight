@@ -94,8 +94,9 @@ class GPF_MPU6050 {
         bool getMotion6(int16_t*, int16_t*, int16_t*, int16_t*, int16_t*, int16_t*);
         void readSensorsAndDoCalculations();
 
-        float convert_90_90_to_0_360(float, float);
-        float convert_0_360_to_90_90(float);
+        float convert_90_90_to_0_360(float, float);  //Retour entre    0 et 360 degres
+        float convert_0_360_to_90_90(float);         //Retour entre  -90 et 90  degres
+        float convert_0_360_to_180_180(float);       //Retour entre -180 et 180 degres
 
 /*
         // XA_OFFS_* registers
@@ -126,54 +127,14 @@ class GPF_MPU6050 {
         void calibrate();
         void meansensors();
 
-        int8_t orientationCalcMode = GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER;
-        float complementaryFilterGyroWeightPercent;
-        float complementaryFilterGyroWeight;
-        float complementaryFilterAccWeight;
-        
-        float acc_pitch_radiant;
-        float acc_pitch_degree;
-        float acc_pitch_degree_0_360_z_normal;
-        float acc_pitch_degree_0_360_z_inversed;
-        float acc_pitch_degree_old; //sert dans le mode low pass filter
+        float output_pitch_90_90;  // Normalement de -90 à 90 degrés mais peut-être plus dans certains modes test mais pas dans le mode GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER
+        float output_roll_90_90;   // Normalement de -90 à 90 degrés mais peut-être plus dans certains modes test mais pas dans le mode GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER
+        float output_z_90_90;              
 
-        float acc_roll_radiant;
-        float acc_roll_degree;
-        float acc_roll_degree_0_360_z_normal;
-        float acc_roll_degree_0_360_z_inversed;
-        float acc_roll_degree_old; //sert dans le mode low pass filter
-
-        float acc_z_radiant;
-        float acc_z_degree;
-        float acc_z_degree_0_360;
-
-        float gyr_pitch_degree = 0;
-        float gyr_roll_degree = 0;
-        float gyr_pitch_degree_sum = 0;
-        float gyr_roll_degree_sum = 0;
-
-        float cadranPitchFilter;
-        float cadranPitchAcc;
-        float cadranPitchDelta_used;
-        float cadranPitchDelta_z_normal;
-        float cadranPitchDelta_z_inversed;
-
-        float cadranRollFilter;
-        float cadranRollAcc;
-        float cadranRollDelta_used;
-        float cadranRollDelta_z_normal;
-        float cadranRollDelta_z_inversed;
-
-        float complementary_filter_0_360_pitch = 0;
-        float complementary_filter_0_360_roll = 0;
-
-        float time_elapsed;
-        unsigned long millis_old = 0;
-        float gyr_lsb_sensitivity;
-        float acc_lsb_sensitivity;
-
-        float output_pitch; // Normalement de -180 à 180 degrés mais peut-être plus dans certains modes test mais pas dans le mode GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER
-        float output_roll;  // Normalement de -180 à 180 degrés mais peut-être plus dans certains modes test mais pas dans le mode GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER
+        float output_pitch_0_360;
+        float output_roll_0_360;
+        float output_z_0_360_pitch;
+        float output_z_0_360_roll;
 
         int16_t calibration_offset_ax,calibration_offset_ay,calibration_offset_az,calibration_offset_gx,calibration_offset_gy,calibration_offset_gz;
         int16_t accX_with_offsets,   accY_with_offsets,   accZ_with_offsets,   gyrX_with_offsets,   gyrY_with_offsets,   gyrZ_with_offsets;        
@@ -185,7 +146,34 @@ class GPF_MPU6050 {
         elapsedMillis debug_sincePrint;
 
         int16_t accX_raw_no_offsets, accY_raw_no_offsets, accZ_raw_no_offsets, gyrX_raw_no_offsets, gyrY_raw_no_offsets, gyrZ_raw_no_offsets;
-        
+        int8_t orientationCalcMode = GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER;
+        float complementaryFilterGyroWeightPercent;
+        float complementaryFilterGyroWeight;
+        float complementaryFilterAccWeight;
+
+        float complementary_filter_0_360_pitch = 0;
+        float complementary_filter_0_360_roll = 0;
+
+        float acc_pitch_radiant;
+        float acc_pitch_degree;
+        float acc_pitch_degree_old; //sert dans le mode low pass filter
+
+        float acc_roll_radiant;
+        float acc_roll_degree;
+        float acc_roll_degree_old; //sert dans le mode low pass filter
+
+        float acc_z_radiant;
+        float acc_z_degree;
+
+        float gyr_pitch_degree = 0;
+        float gyr_roll_degree = 0;
+        float gyr_pitch_degree_sum = 0;
+        float gyr_roll_degree_sum = 0;
+
+        float time_elapsed;
+        unsigned long millis_old = 0;
+        float gyr_lsb_sensitivity;
+        float acc_lsb_sensitivity;        
 };
 
 #endif

@@ -67,6 +67,8 @@ struct gpf_config_struct {
         
 typedef enum {
     GPF_MENU_MAIN_MENU,    
+       GPF_MENU_INFO_MENU,
+          GPF_MENU_INFO_STATS,
        GPF_MENU_TEST_MENU,
           GPF_MENU_TEST_RC,
           GPF_MENU_TEST_IMU,

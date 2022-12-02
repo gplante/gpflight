@@ -311,6 +311,9 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
     // Z Axis (-90 degrés à 90 degrés)
     acc_z_radiant = atan(accZ_with_offsets/sqrt(accX2_with_offsets+accY2_with_offsets)); 
     acc_z_degree  = acc_z_radiant/2/PI*360;
+    output_z_90_90 = acc_z_degree;
+    output_z_0_360_pitch = convert_90_90_to_0_360(acc_z_degree, acc_pitch_degree);
+    output_z_0_360_roll = convert_90_90_to_0_360(acc_z_degree, acc_roll_degree);
 
     // X Axis // Z Axis (-90 degrés à 90 degrés)
     acc_pitch_radiant = atan(accX_with_offsets/sqrt(accY2_with_offsets+accZ2_with_offsets));
@@ -321,16 +324,16 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
     acc_roll_degree  = acc_roll_radiant/2/PI*360;
 
     if (orientationCalcMode == GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_NO_FILTER) {
-     output_pitch = acc_pitch_degree;
-     output_roll  = acc_roll_degree;
+     output_pitch_90_90 = acc_pitch_degree;
+     output_roll_90_90  = acc_roll_degree;
     }
 
     if (orientationCalcMode == GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_LOW_PASS_FILTER) {
-      output_pitch = GPF_IMU_LOW_PASS_FILTER_WEIGHT_OLD*acc_pitch_degree_old + GPF_IMU_LOW_PASS_FILTER_WEIGHT_CURRENT*acc_pitch_degree;
-      output_roll  = GPF_IMU_LOW_PASS_FILTER_WEIGHT_OLD*acc_roll_degree_old  + GPF_IMU_LOW_PASS_FILTER_WEIGHT_CURRENT*acc_roll_degree;
+      output_pitch_90_90 = GPF_IMU_LOW_PASS_FILTER_WEIGHT_OLD*acc_pitch_degree_old + GPF_IMU_LOW_PASS_FILTER_WEIGHT_CURRENT*acc_pitch_degree;
+      output_roll_90_90  = GPF_IMU_LOW_PASS_FILTER_WEIGHT_OLD*acc_roll_degree_old  + GPF_IMU_LOW_PASS_FILTER_WEIGHT_CURRENT*acc_roll_degree;
  
-      acc_pitch_degree_old = output_pitch;
-      acc_roll_degree_old  = output_roll;
+      acc_pitch_degree_old = output_pitch_90_90;
+      acc_roll_degree_old  = output_roll_90_90;
     }
 
     if (
@@ -346,16 +349,16 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
     }
     
     if (orientationCalcMode == GPF_IMU_ORIENTATION_CALC_MODE_GYRO_CURRENT_NO_FILTER) {
-     output_pitch = gyr_pitch_degree;
-     output_roll  = gyr_roll_degree;      
+     output_pitch_90_90 = gyr_pitch_degree;
+     output_roll_90_90  = gyr_roll_degree;      
     }
 
     if (orientationCalcMode == GPF_IMU_ORIENTATION_CALC_MODE_GYRO_SUM_NO_FILTER) {
      gyr_pitch_degree_sum = gyr_pitch_degree_sum + gyr_pitch_degree;
      gyr_roll_degree_sum  = gyr_roll_degree_sum + gyr_roll_degree;
 
-     output_pitch = gyr_pitch_degree_sum;
-     output_roll  = gyr_roll_degree_sum;      
+     output_pitch_90_90 = gyr_pitch_degree_sum;
+     output_roll_90_90  = gyr_roll_degree_sum;      
     }
 
     if (orientationCalcMode == GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER) {
@@ -382,7 +385,8 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
       
       complementary_filter_0_360_pitch = (complementaryFilterGyroWeight*(complementary_filter_0_360_pitch + gyr_pitch_degree)) + (complementaryFilterAccWeight*(complementary_filter_0_360_pitch + pitch_delta));
       complementary_filter_0_360_pitch = fmod((360  + complementary_filter_0_360_pitch),360);
-      output_pitch = convert_0_360_to_90_90(complementary_filter_0_360_pitch);
+      output_pitch_0_360 = complementary_filter_0_360_pitch;
+      output_pitch_90_90 = convert_0_360_to_90_90(output_pitch_0_360);
 
       // roll:
       // Voir commentaires de pitch ci-haut.
@@ -403,7 +407,8 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
       
       complementary_filter_0_360_roll = (complementaryFilterGyroWeight*(complementary_filter_0_360_roll + gyr_roll_degree)) + (complementaryFilterAccWeight*(complementary_filter_0_360_roll + roll_delta));
       complementary_filter_0_360_roll = fmod((360  + complementary_filter_0_360_roll),360);
-      output_roll = convert_0_360_to_90_90(complementary_filter_0_360_roll);
+      output_roll_0_360 = complementary_filter_0_360_roll;
+      output_roll_90_90 = convert_0_360_to_90_90(output_roll_0_360);
       
     }
 
@@ -412,20 +417,25 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
      if (debug_sincePrint > DEBUG_GPF_MPU6050_DELAY) {
 
       if (orientationCalcMode == GPF_IMU_ORIENTATION_CALC_MODE_GYRO_CURRENT_NO_FILTER) {
-       DEBUG_GPF_MPU6050_PRINT(gyr_pitch_degree);                        DEBUG_GPF_MPU6050_PRINT(F(", "));
-       DEBUG_GPF_MPU6050_PRINT(gyr_roll_degree);                        DEBUG_GPF_MPU6050_PRINT(F(", "));
+       DEBUG_GPF_MPU6050_PRINT(gyr_pitch_degree);              DEBUG_GPF_MPU6050_PRINT(F(", "));
+       DEBUG_GPF_MPU6050_PRINT(gyr_roll_degree);               DEBUG_GPF_MPU6050_PRINT(F(", "));
        DEBUG_GPF_MPU6050_PRINTLN();
       }
 
       if (orientationCalcMode == GPF_IMU_ORIENTATION_CALC_MODE_GYRO_SUM_NO_FILTER) {
-       DEBUG_GPF_MPU6050_PRINT(gyr_pitch_degree_sum);                        DEBUG_GPF_MPU6050_PRINT(F(", "));
-       DEBUG_GPF_MPU6050_PRINT(gyr_roll_degree_sum);                        DEBUG_GPF_MPU6050_PRINT(F(", "));
+       DEBUG_GPF_MPU6050_PRINT(gyr_pitch_degree_sum);          DEBUG_GPF_MPU6050_PRINT(F(", "));
+       DEBUG_GPF_MPU6050_PRINT(gyr_roll_degree_sum);           DEBUG_GPF_MPU6050_PRINT(F(", "));
        DEBUG_GPF_MPU6050_PRINTLN();
       }
 
       if (orientationCalcMode == GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER) {
-       DEBUG_GPF_MPU6050_PRINT(output_pitch);                       DEBUG_GPF_MPU6050_PRINT(F(", "));       
-       DEBUG_GPF_MPU6050_PRINT(output_roll);                       DEBUG_GPF_MPU6050_PRINT(F(", "));       
+       DEBUG_GPF_MPU6050_PRINT(output_pitch_90_90);            DEBUG_GPF_MPU6050_PRINT(F(", "));       
+       DEBUG_GPF_MPU6050_PRINT(output_roll_90_90);             DEBUG_GPF_MPU6050_PRINT(F(", "));       
+
+       DEBUG_GPF_MPU6050_PRINT(output_z_90_90);                DEBUG_GPF_MPU6050_PRINT(F(", "));       
+       DEBUG_GPF_MPU6050_PRINT(output_z_0_360_pitch);          DEBUG_GPF_MPU6050_PRINT(F(", "));       
+       DEBUG_GPF_MPU6050_PRINT(output_z_0_360_roll);           DEBUG_GPF_MPU6050_PRINT(F(", "));       
+       
        DEBUG_GPF_MPU6050_PRINTLN();
       }
 
@@ -507,6 +517,18 @@ float GPF_MPU6050::convert_0_360_to_90_90(float degree) {
  }
 
  return newDegree;
+}
+
+float GPF_MPU6050::convert_0_360_to_180_180(float degree) {
+  float retour = 0;
+
+  if (degree <= 180) {
+    retour = degree;
+  } else {
+    retour = -(180 - (degree - 180));    
+  }
+
+  return retour;
 }
 
 /*
