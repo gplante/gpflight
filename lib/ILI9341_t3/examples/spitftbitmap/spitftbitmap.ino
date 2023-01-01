@@ -16,7 +16,7 @@
 
 #include <ILI9341_t3.h> // Hardware-specific library
 #include <SPI.h>
-#include <SD.h>
+#include <SdFat.h>
 
 // TFT display and SD card will share the hardware SPI interface.
 // Hardware SPI pins are specific to the Arduino board type and

@@ -9,7 +9,7 @@
 #include "Arduino.h"
 #include "gpf_util.h"
 #include "gpf_cons.h"
-
+#include <TimeLib.h>
 
 void gpf_util_blinkMainBoardLed(uint8_t nbrBlink) { 
  // Attention, la LED_BUILTIN (pin 13) est la même pin que le SPI SCK sur un Teensy 4.1 
@@ -54,11 +54,13 @@ void  gpf_util_resetConfigToDefault(gpf_config_struct *ptr) {
 
    ptr->version          = GPF_MISC_CONFIG_CURRENT_VERSION;
 
-   ptr->channelMaps[GPF_RC_STICK_ROLL]     = GPF_RC_STICK_ROLL_DEFAULT_CHANNEL; 
-   ptr->channelMaps[GPF_RC_STICK_PITCH]    = GPF_RC_STICK_PITCH_DEFAULT_CHANNEL; 
-   ptr->channelMaps[GPF_RC_STICK_THROTTLE] = GPF_RC_STICK_THROTTLE_DEFAULT_CHANNEL; 
-   ptr->channelMaps[GPF_RC_STICK_YAW]      = GPF_RC_STICK_YAW_DEFAULT_CHANNEL; 
-   ptr->channelMaps[GPF_RC_STICK_ARM]      = GPF_RC_STICK_ARM_DEFAULT_CHANNEL;   
+   ptr->channelMaps[GPF_RC_STICK_ROLL]        = GPF_RC_STICK_ROLL_DEFAULT_CHANNEL; 
+   ptr->channelMaps[GPF_RC_STICK_PITCH]       = GPF_RC_STICK_PITCH_DEFAULT_CHANNEL; 
+   ptr->channelMaps[GPF_RC_STICK_THROTTLE]    = GPF_RC_STICK_THROTTLE_DEFAULT_CHANNEL; 
+   ptr->channelMaps[GPF_RC_STICK_YAW]         = GPF_RC_STICK_YAW_DEFAULT_CHANNEL; 
+   ptr->channelMaps[GPF_RC_STICK_ARM]         = GPF_RC_STICK_ARM_DEFAULT_CHANNEL;   
+   ptr->channelMaps[GPF_RC_STICK_FLIGHT_MODE] = GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL;   
+   ptr->channelMaps[GPF_RC_STICK_BLACK_BOX]   = GPF_RC_STICK_BLACK_BOX_DEFAULT_CHANNEL;   
 
    ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_PROPORTIONAL]   = 1;
    ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_INTEGRAL]       = 1;
@@ -78,24 +80,16 @@ void  gpf_util_resetConfigToDefault(gpf_config_struct *ptr) {
 
    ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_X]      = 0;
    ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_Y]      = 0;
-   ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_Z]      = 0;
+   ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_Z]      = 0;   
 
-   //On averti l'utilisateur de cette situation puis on entre directement enmode calibration
-   //tone(pinBuzzer, 200);
-   //delay(300);
-   //noTone(pinBuzzer);   
-   
-   //tone(pinBuzzer, 150);
-   //delay(300);
-   //noTone(pinBuzzer);
-   
-   //tone(pinBuzzer, 100);
-   //delay(300);
-   //noTone(pinBuzzer);
-   
-   //calibrationMode = true;
+}
 
+time_t gpf_util_getTeensy3Time() {
+  return Teensy3Clock.get();
+}
 
-  //myConfig_ptr->channelMaps[GPF_RC_STICK_ARM]
+void  gpf_util_beep(uint16_t frequency, uint32_t duration) {
 
+  tone(GPF_MISC_PIN_BUZZER, frequency, duration);
+  
 }

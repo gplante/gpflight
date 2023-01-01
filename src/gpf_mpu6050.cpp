@@ -22,12 +22,33 @@ GPF_MPU6050::GPF_MPU6050() {
 
 void GPF_MPU6050::initialize(gpf_config_struct *ptr) {
     myConfig_ptr = ptr;
+
+    //Patch temporaire
+    /*
+    ptr->imuOffsets[GPF_IMU_SENSOR_ACCELEROMETER][GPF_IMU_AXE_X]  = 0;
+    ptr->imuOffsets[GPF_IMU_SENSOR_ACCELEROMETER][GPF_IMU_AXE_Y]  = 0;
+    ptr->imuOffsets[GPF_IMU_SENSOR_ACCELEROMETER][GPF_IMU_AXE_Z]  = 0;
+
+    ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_X]      = 0;
+    ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_Y]      = 0;
+    ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_Z]      = 0;
+    */
+    //Fin Patch temporaire
+
     setClockSource(GPF_MPU6050_CLOCK_PLL_XGYRO);
     setSleepEnabled(false); // thanks to Jack Elston for pointing this one out!
 
     setComplementaryFilterGyroWeightPercent(99.9);
-    setFullScaleAccelRange(GPF_MPU6050_ACCEL_FS_4); //Important, mettre cette ligne avant setFullScaleGyroRange() sinon le calcul gyro ne semble pas bien se faire ???
+    //setFullScaleAccelRange(GPF_MPU6050_ACCEL_FS_2); 
+    setFullScaleAccelRange(GPF_MPU6050_ACCEL_FS_4); 
+    //setFullScaleAccelRange(GPF_MPU6050_ACCEL_FS_8); 
+    //setFullScaleAccelRange(GPF_MPU6050_ACCEL_FS_16); 
+    
+    //setFullScaleGyroRange(GPF_MPU6050_GYRO_FS_500);
     setFullScaleGyroRange(GPF_MPU6050_GYRO_FS_1000);
+    //setFullScaleGyroRange(GPF_MPU6050_GYRO_FS_2000);
+
+    setRate(7);
 
     setOrientationCalcMode(GPF_IMU_ORIENTATION_CALC_MODE_ACCEL_GYRO_COMPLEMENTARY_FILTER);
     //setOrientationCalcMode(GPF_IMU_ORIENTATION_CALC_MODE_GYRO_CURRENT_NO_FILTER);
@@ -48,13 +69,22 @@ void GPF_MPU6050::initialize(gpf_config_struct *ptr) {
     millis_old = millis();
 
     #ifdef DEBUG_GPF_MPU6050_ENABLED
-     //if (debug_sincePrint > DEBUG_GPF_MPU6050_DELAY) {
-      //DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
-      //DEBUG_GPF_MPU6050_PRINT(F("getDeviceID(): hex:"));
-      //DEBUG_GPF_MPU6050_PRINT(getDeviceID(), HEX);      
-      //DEBUG_GPF_MPU6050_PRINTLN();
-      //debug_sincePrint = 0;
-     //}
+     
+      DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
+      DEBUG_GPF_MPU6050_PRINT(F("getDeviceID(): hex:"));
+      DEBUG_GPF_MPU6050_PRINT(getDeviceID(), HEX);      
+      DEBUG_GPF_MPU6050_PRINTLN();
+      
+      DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
+      DEBUG_GPF_MPU6050_PRINT(F("getDLPFMode(): hex:"));
+      DEBUG_GPF_MPU6050_PRINT(getDLPFMode(), HEX);      
+      DEBUG_GPF_MPU6050_PRINTLN();
+
+      DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
+      DEBUG_GPF_MPU6050_PRINT(F("getRate(): hex:"));
+      DEBUG_GPF_MPU6050_PRINT(getRate(), HEX);      
+      DEBUG_GPF_MPU6050_PRINTLN();
+     
     #endif
 }
 
@@ -103,19 +133,19 @@ void GPF_MPU6050::setFullScaleAccelRange(uint8_t range) {
 
     switch (range) {
      case GPF_MPU6050_ACCEL_FS_2:
-      gyr_lsb_sensitivity = GPF_MPU6050_ACCEL_FS_2_SENSITIVITY;
+      acc_lsb_sensitivity = GPF_MPU6050_ACCEL_FS_2_SENSITIVITY;
       break;
 
      case GPF_MPU6050_ACCEL_FS_4: 
-      gyr_lsb_sensitivity = GPF_MPU6050_ACCEL_FS_4_SENSITIVITY;
+      acc_lsb_sensitivity = GPF_MPU6050_ACCEL_FS_4_SENSITIVITY;
       break;
 
      case GPF_MPU6050_ACCEL_FS_8: 
-      gyr_lsb_sensitivity = GPF_MPU6050_ACCEL_FS_8_SENSITIVITY;
+      acc_lsb_sensitivity = GPF_MPU6050_ACCEL_FS_8_SENSITIVITY;
       break;
 
      case GPF_MPU6050_ACCEL_FS_16: 
-      gyr_lsb_sensitivity = GPF_MPU6050_ACCEL_FS_16_SENSITIVITY;
+      acc_lsb_sensitivity = GPF_MPU6050_ACCEL_FS_16_SENSITIVITY;
       break;
     
      default:
@@ -212,6 +242,74 @@ uint8_t GPF_MPU6050::getDeviceID() {
     return buffer[0];
 }
 
+/** Get digital low-pass filter configuration.
+ * The DLPF_CFG parameter sets the digital low pass filter configuration. It
+ * also determines the internal sampling rate used by the device as shown in
+ * the table below.
+ *
+ * Note: The accelerometer output rate is 1kHz. This means that for a Sample
+ * Rate greater than 1kHz, the same accelerometer sample may be output to the
+ * FIFO, DMP, and sensor registers more than once.
+ *
+ * <pre>
+ *          |   ACCELEROMETER    |           GYROSCOPE
+ * DLPF_CFG | Bandwidth | Delay  | Bandwidth | Delay  | Sample Rate
+ * ---------+-----------+--------+-----------+--------+-------------
+ * 0        | 260Hz     | 0ms    | 256Hz     | 0.98ms | 8kHz
+ * 1        | 184Hz     | 2.0ms  | 188Hz     | 1.9ms  | 1kHz
+ * 2        | 94Hz      | 3.0ms  | 98Hz      | 2.8ms  | 1kHz
+ * 3        | 44Hz      | 4.9ms  | 42Hz      | 4.8ms  | 1kHz
+ * 4        | 21Hz      | 8.5ms  | 20Hz      | 8.3ms  | 1kHz
+ * 5        | 10Hz      | 13.8ms | 10Hz      | 13.4ms | 1kHz
+ * 6        | 5Hz       | 19.0ms | 5Hz       | 18.6ms | 1kHz
+ * 7        |   -- Reserved --   |   -- Reserved --   | Reserved
+ * </pre>
+ *
+ * @return DLFP configuration
+ * @see MPU6050_RA_CONFIG
+ * @see MPU6050_CFG_DLPF_CFG_BIT
+ * @see MPU6050_CFG_DLPF_CFG_LENGTH
+ */
+uint8_t GPF_MPU6050::getDLPFMode() {
+    I2Cdev::readBits(devAddr, GPF_MPU6050_RA_CONFIG, GPF_MPU6050_CFG_DLPF_CFG_BIT, GPF_MPU6050_CFG_DLPF_CFG_LENGTH, buffer);
+    return buffer[0];
+}
+
+/** Get gyroscope output rate divider.
+ * The sensor register output, FIFO output, DMP sampling, Motion detection, Zero
+ * Motion detection, and Free Fall detection are all based on the Sample Rate.
+ * The Sample Rate is generated by dividing the gyroscope output rate by
+ * SMPLRT_DIV:
+ *
+ * Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV)
+ *
+ * where Gyroscope Output Rate = 8kHz when the DLPF is disabled (DLPF_CFG = 0 or
+ * 7), and 1kHz when the DLPF is enabled (see Register 26).
+ *
+ * Note: The accelerometer output rate is 1kHz. This means that for a Sample
+ * Rate greater than 1kHz, the same accelerometer sample may be output to the
+ * FIFO, DMP, and sensor registers more than once.
+ *
+ * For a diagram of the gyroscope and accelerometer signal paths, see Section 8
+ * of the MPU-6000/MPU-6050 Product Specification document.
+ *
+ * @return Current sample rate
+ * @see MPU6050_RA_SMPLRT_DIV
+ */
+uint8_t GPF_MPU6050::getRate() {
+    I2Cdev::readByte(devAddr, GPF_MPU6050_RA_SMPLRT_DIV, buffer);
+    return buffer[0];
+}
+
+/** Set gyroscope sample rate divider.
+ * @param rate New sample rate divider
+ * @see getRate()
+ * @see MPU6050_RA_SMPLRT_DIV
+ */
+void GPF_MPU6050::setRate(uint8_t rate) {
+    I2Cdev::writeByte(devAddr, GPF_MPU6050_RA_SMPLRT_DIV, rate);
+}
+
 /** Get raw 6-axis motion sensor readings (accel/gyro).
  * Retrieves all currently available motion sensor values.
  * @param ax 16-bit signed integer container for accelerometer X-axis value
@@ -239,7 +337,7 @@ bool GPF_MPU6050::getMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx,
 /** Get raw 6-axis motion sensor readings (accel/gyro) and do some math.
  * Retrieves all currently available motion sensor values and do some math. 
  */
-void GPF_MPU6050::readSensorsAndDoCalculations() {
+bool GPF_MPU6050::readSensorsAndDoCalculations() {
     unsigned long accX2_with_offsets, accY2_with_offsets, accZ2_with_offsets;
     static unsigned long errCpt_type_1 = 0, errCpt_type_2 = 0;
 
@@ -261,11 +359,11 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
       errCpt_type_1++;
       DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
       DEBUG_GPF_MPU6050_PRINTLN(F("***** getMotion6() a retourne false"));
-      return;
+      errorCount++;
+      return false;
     }
 
     // **************************************************************************************
-    // *** Condition jamais testée, plus capable de reproduire le problème
     // On dirait que des fois, la fonction getMotion6() retournait des valeurs à 0 puis ensuite les calculs donnaient comme résultat Nan.
     // Puisque dans la boucle, on se sert toujours des valauers des calculs précédents pour refaire les nouveaux calculs et bien les nouveaux calculs restaient toujours à Nan.
     // Donc au lieu d'obtenir des calculs à Nan on ne fait pas les calculs puis on sort immédiatement de la fonction.
@@ -273,13 +371,15 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
      errCpt_type_2++;
      DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
      DEBUG_GPF_MPU6050_PRINTLN(F("***** NAN return"));     
-     return;
+     errorCount++;
+     return false;
     }
 
     if ( (accX_raw_no_offsets == 0) && (accY_raw_no_offsets == 0) && (accZ_raw_no_offsets == 0) && (gyrX_raw_no_offsets == 0) && (gyrY_raw_no_offsets == 0) && (gyrZ_raw_no_offsets == 0)) {
       DEBUG_GPF_MPU6050_PRINT(F("MPU6050:"));
       DEBUG_GPF_MPU6050_PRINTLN(F("***** Tout a zero return"));     
-      return;
+      errorCount++;
+      return false;
     }    
     //*** Fin de Condition jamais testée, plus capable de reproduire le problème
     // **************************************************************************************
@@ -412,7 +512,7 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
       
     }
 
-
+/*
     #ifdef DEBUG_GPF_MPU6050_ENABLED
      if (debug_sincePrint > DEBUG_GPF_MPU6050_DELAY) {
 
@@ -442,7 +542,9 @@ void GPF_MPU6050::readSensorsAndDoCalculations() {
        debug_sincePrint = 0;
      }
     #endif
+*/
 
+ return true;
 }
 
 float GPF_MPU6050::convert_90_90_to_0_360(float x_or_y_Degree, float z_Degree) {
@@ -702,14 +804,19 @@ void GPF_MPU6050::calibrate() {
     DEBUG_GPF_MPU6050_PRINTLN();
 
   }
-  
 
   //Moyenne du min/max qui sera l'offset final
   calibration_offset_ax = calibration_offset_ax_min + ((calibration_offset_ax_max - calibration_offset_ax_min)/2); 
   calibration_offset_ay = calibration_offset_ay_min + ((calibration_offset_ay_max - calibration_offset_ay_min)/2); 
   //calibration_offset_az = calibration_offset_az_min + ((calibration_offset_az_max - calibration_offset_az_min)/2); 
-  calibration_offset_az = 16384 - (calibration_offset_az_min + ((calibration_offset_az_max - calibration_offset_az_min)/2)); 
-  //az_offset=(16384-mean_az)/8
+
+
+  //Patch
+  if (mpu6050_model == GPF_MPU6050_MODEL_GY_521) {
+   calibration_offset_az = 16384               - (calibration_offset_az_min + ((calibration_offset_az_max - calibration_offset_az_min)/2)); 
+  } else {   
+   calibration_offset_az = acc_lsb_sensitivity - (calibration_offset_az_min + ((calibration_offset_az_max - calibration_offset_az_min)/2)); 
+  }
 
   calibration_offset_gx = calibration_offset_gx_min + ((calibration_offset_gx_max - calibration_offset_gx_min)/2); 
   calibration_offset_gy = calibration_offset_gy_min + ((calibration_offset_gy_max - calibration_offset_gy_min)/2); 

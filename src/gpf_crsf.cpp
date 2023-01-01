@@ -98,12 +98,8 @@ void GPF_CRSF::readRx() {
     reset_bytesReceivedCount_and_buffer();
    }
 
-   if (new_frame_is_about_to_start) { //On en profite pour envoyer la télémétrie entre deux frames recus mais je pense qu'on pourrait l'envoyer n'importe quand.
-    
-    sendTelemetryToTx();
-
-
-    
+   if (new_frame_is_about_to_start) { //On en profite pour envoyer la télémétrie entre deux frames recus mais je pense qu'on pourrait l'envoyer n'importe quand.    
+    sendTelemetryToTx();    
    }
 
    isInFailSafe =(duration_between_frame > GPF_CRSF_DELAY_FOR_FAILSAFE);

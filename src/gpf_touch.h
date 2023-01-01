@@ -8,11 +8,14 @@
  * 
  */
 
+#ifndef GPF_TOUCH_H
+#define GPF_TOUCH_H
+
 #include "Arduino.h"
 #include "XPT2046_Touchscreen.h"
 
-#ifndef GPF_TOUCH_H
-#define GPF_TOUCH_H
+#define GPF_TOUCH_UNTOUCH_TRESHOLD 50 //ms
+#define GPF_TOUCH_TOUCH_TRESHOLD   50 //ms
 
 class GPF_TOUCH {
 

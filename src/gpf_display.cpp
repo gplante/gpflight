@@ -34,7 +34,7 @@ void GPF_DISPLAY::initialize() {
     //tft.setClock(1000000);
     tft.fillScreen(ILI9341_BLACK);
     tft.setTextColor(ILI9341_YELLOW);  
-    setTextSize(4);
+    setTextSize(2); //4
     setRotation(0);
     tft.setScroll(0);    
     
@@ -314,7 +314,7 @@ void GPF_DISPLAY::modeLogging_print_sw(uint8_t character) {
 
 void GPF_DISPLAY::clearScreen() {
    get_tft()->setFontAdafruit();
-   setTextSize(4);
+   setTextSize(2); //4
    setRotation(0);
    get_tft()->setScroll(0);
    get_tft()->fillScreen(ILI9341_BLACK);

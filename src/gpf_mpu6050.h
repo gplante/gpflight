@@ -14,6 +14,10 @@
 #include "Arduino.h"
 #include "gpf_cons.h"
 
+#define GPF_MPU6050_MODEL_GY_521            0 //Acheté chez Aliexpress dans ce genre là: https://www.aliexpress.com/item/32956876118.html
+#define GPF_MPU6050_MODEL_GY_6500_GY_9250   1 //Acheté chez Aliexpress dans ce genre là: https://www.aliexpress.com/item/1005002567455144.html
+#define GPF_MPU6050_MODEL_ADAFRUIT_3886     2 //https://www.adafruit.com/product/3886
+
 #define GPF_MPU6050_ADDRESS_AD0_LOW         0x68 // address pin low (GND), default for InvenSense evaluation board
 #define GPF_MPU6050_ADDRESS_AD0_HIGH        0x69 // address pin high (VCC)
 #define GPF_MPU6050_DEFAULT_ADDRESS         GPF_MPU6050_ADDRESS_AD0_LOW
@@ -23,6 +27,7 @@
 #define GPF_MPU6050_RA_PWR_MGMT_1           0x6B
 #define GPF_MPU6050_PWR1_CLKSEL_BIT         2
 #define GPF_MPU6050_PWR1_CLKSEL_LENGTH      3
+#define GPF_MPU6050_RA_CONFIG               0x1A
 #define GPF_MPU6050_RA_GYRO_CONFIG          0x1B
 #define GPF_MPU6050_GCONFIG_FS_SEL_BIT      4
 #define GPF_MPU6050_GCONFIG_FS_SEL_LENGTH   2
@@ -42,6 +47,9 @@
 #define GPF_MPU6050_ACCEL_FS_16             0x03
 #define GPF_MPU6050_RA_ACCEL_XOUT_H         0x3B
 
+#define GPF_MPU6050_CFG_DLPF_CFG_BIT    2
+#define GPF_MPU6050_CFG_DLPF_CFG_LENGTH 3
+
 #define GPF_MPU6050_RA_XA_OFFS_H        0x06 //[15:0] XA_OFFS
 #define GPF_MPU6050_RA_XA_OFFS_L_TC     0x07
 #define GPF_MPU6050_RA_YA_OFFS_H        0x08 //[15:0] YA_OFFS
@@ -55,6 +63,7 @@
 #define GPF_MPU6050_RA_YG_OFFS_USRL     0x16
 #define GPF_MPU6050_RA_ZG_OFFS_USRH     0x17 //[15:0] ZG_OFFS_USR
 #define GPF_MPU6050_RA_ZG_OFFS_USRL     0x18
+#define GPF_MPU6050_RA_SMPLRT_DIV       0x19
 
 #define GPF_MPU6050_GYRO_FS_250_SENSITIVITY     131.0 //LSB/dps
 #define GPF_MPU6050_GYRO_FS_500_SENSITIVITY      65.5 //LSB/dps
@@ -91,8 +100,12 @@ class GPF_MPU6050 {
         void setOrientationCalcMode(uint8_t);
 
         uint8_t getDeviceID();
+        uint8_t getDLPFMode();        
+        uint8_t getRate();
+        void setRate(uint8_t rate);
+
         bool getMotion6(int16_t*, int16_t*, int16_t*, int16_t*, int16_t*, int16_t*);
-        void readSensorsAndDoCalculations();
+        bool readSensorsAndDoCalculations();
 
         float convert_90_90_to_0_360(float, float);  //Retour entre    0 et 360 degres
         float convert_0_360_to_90_90(float);         //Retour entre  -90 et 90  degres
@@ -138,9 +151,11 @@ class GPF_MPU6050 {
 
         int16_t calibration_offset_ax,calibration_offset_ay,calibration_offset_az,calibration_offset_gx,calibration_offset_gy,calibration_offset_gz;
         int16_t accX_with_offsets,   accY_with_offsets,   accZ_with_offsets,   gyrX_with_offsets,   gyrY_with_offsets,   gyrZ_with_offsets;        
+        unsigned long errorCount = 0;
     private:
         gpf_config_struct *myConfig_ptr = NULL;
 
+        uint8_t mpu6050_model = GPF_MPU6050_MODEL_GY_6500_GY_9250;
         uint8_t devAddr;
         uint8_t buffer[14];
         elapsedMillis debug_sincePrint;
@@ -174,6 +189,8 @@ class GPF_MPU6050 {
         unsigned long millis_old = 0;
         float gyr_lsb_sensitivity;
         float acc_lsb_sensitivity;        
+
+        
 };
 
 #endif

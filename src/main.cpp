@@ -32,6 +32,8 @@
 #include "gpf_display.h"
 #include "XPT2046_Touchscreen.h"
 #include "gpf_touch.h"
+#include "gpf_sdcard.h"
+#include <TimeLib.h>
 
 gpf_config_struct myConfig;
 
@@ -39,20 +41,23 @@ GPF          myFc; //My Flight Controller GPFlight
 
 elapsedMillis sinceDummy;   
 
+
 void setup() {
 
   pinMode(LED_BUILTIN, OUTPUT); // initialize LED digital pin as an output. // Attention, la LED_BUILTIN (pin 13) est la même pin que le SPI SCK sur un Teensy 4.1
+  pinMode(GPF_MISC_PIN_BUZZER, OUTPUT); // buzzer/piezo
+
   gpf_util_blinkMainBoardLed(3);
   Serial.begin(115200);  //Port USB //C'est long genre 2 secondes ???
   sinceDummy = 0;
   while ((!Serial) && (sinceDummy < 1000)) { }; //Attend maximum 1 seconde que le port serie Serial (USB) soit prêt sinon si port usb non branché, la programme jam ici.
   DEBUG_GPF_PRINTLN(F("Port serie Serial (USB) ouvert."));
   DEBUG_GPF_PRINT(F("prog version:"));  
-  DEBUG_GPF_PRINTLN(GPF_MISC_PROG_CURRENT_VERSION);  
+  DEBUG_GPF_PRINTLN(GPF_MISC_PROG_CURRENT_VERSION);    
   
   gpf_util_blinkMainBoardLed(2);
 
-  //xxxxxxxxxxxxxxxxxxxxxx
+  //Config eeprom
   EEPROM.get(0, myConfig); 
   DEBUG_GPF_PRINT(F("eeprom config version:"));
   DEBUG_GPF_PRINTLN(myConfig.version);
@@ -61,17 +66,33 @@ void setup() {
 
   if (myConfig.version != GPF_MISC_CONFIG_CURRENT_VERSION) { //Ca veut dire qu'il n'y a rien d'enregistré dans le eeprom donc on met des valeurs par défaut.
    gpf_util_resetConfigToDefault(&myConfig);
-   
+
+   //On averti l'utilisateur de cette situation
+   gpf_util_beep(GPF_UTIL_BEEP_TONE_ERROR,GPF_UTIL_BEEP_DURATION_ULTRA_LONG);
+   delay(GPF_UTIL_BEEP_DURATION_ULTRA_LONG);
+
+   //Puis on entre directement enmode calibration
+   //myFc.menu_current = GPF_MENU_CONFIG_CALIBRATION_MENU;
   }
-  //xxxxxxxxxxxxxx
+  //Fin Config eeprom
+
+  // Date/Heure - RTC
+  // set the Time library to use Teensy 3.0's RTC to keep time    
+  setSyncProvider(gpf_util_getTeensy3Time);
+
+  if (timeStatus()!= timeSet) {
+    DEBUG_GPF_PRINTLN("Oups, unable to sync with the RTC");    
+  } else {
+    DEBUG_GPF_PRINTLN("RTC has set the system time :-)");
+  }
+  // Fin Date/Heure
 
   Wire.begin();           //La librairie I2Cdev en a besoin
   Wire.setClock(1000000); //Note this is 2.5 times the spec sheet 400 kHz max...
-
+  //Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
+  
   myFc.initialize(&myConfig);
   myFc.genDummyTelemetryData();
-  
-  //myFc.myImu.calibrate();
   
     /*
     Serial.print("getFullScaleAccelRange A:");
@@ -110,8 +131,14 @@ void setup() {
         
     }
 */  
+   //myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
+   DEBUG_GPF_PRINTLN("*******************************************");    
+   DEBUG_GPF_PRINTLN(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));    
+   DEBUG_GPF_PRINTLN(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1,true));    
 }
 
+elapsedMillis sinceChange;
+uint16_t      lastDshotCommandSent = 0;
 
 void loop() {
     static bool isArmed_previous = true;
@@ -119,9 +146,16 @@ void loop() {
     myFc.iAmStartingLoopNow(true);
     myFc.debugDisplayLoopStats();
     myFc.myRc.readRx(); //Armé ou non, on va toujours lire la position des sticks
-    myFc.myImu.readSensorsAndDoCalculations(); //Armé ou non, on va toujours lire le IMU
+    //Todo - Ajuste les variables selon la position des switchs
 
-    myFc.set_arm_IsArmed(false);
+    myFc.set_arm_IsArmed(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_ARM));
+    myFc.set_black_box_IsEnabled(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_BLACK_BOX));
+
+    if (!myFc.myImu.readSensorsAndDoCalculations()) { //Armé ou non, on va toujours lire le IMU
+     //myFc.alarmImuProblem = true; //test
+    }
+    myFc.manageAlarms();
+    myFc.set_arm_IsArmed(false); //test remporaire
 
     if (myFc.get_arm_IsArmed()) {
       // Si armé, on ne va pas dans le menu et on n'affiche rien sur le display non plus. (C'est beaucoup trop long afficher de toute facon)
@@ -130,6 +164,12 @@ void loop() {
       if (!isArmed_previous) { 
         //On était pas armé le tour d'avant donc on pourrait faire un traitement spécial vue qu'on vient tout juste d'armer        
         myFc.displayArmed();
+
+        if (myFc.get_black_box_IsEnabled()) {
+         //myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
+         //myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));
+         //myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->println("Armed");
+        }
         myFc.resetLoopStats();
 
         isArmed_previous = true;
@@ -144,13 +184,54 @@ void loop() {
       if (isArmed_previous) {
         //On était armé le tour d'avant ou qu'on revient d'un autre menu donc on pourrait faire un traitement spécial vu qu'on vient tout juste de désarmer
         isArmed_previous = false;
+
+        if (myFc.get_black_box_IsEnabled()) {
+         //myFc.mySdCard.closeFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
+        }
+
         myFc.resetLoopStats();
       }
 
       myFc.displayAndProcessMenu();
+
+      if (sinceChange > 1000) { //Just change the dshot signal each second to see the signal changing on my scope.
+       if (lastDshotCommandSent == 0) {
+         //lastDshotCommandSent = 2047; //Command 2047 = Motor 100% Throttle
+         //lastDshotCommandSent = 68; // ((68-48) / 2000) * 100 = 1% Throttle
+         lastDshotCommandSent = 88; // ((88-48) / 2000) * 100 = 2% Throttle
+       } else {
+         lastDshotCommandSent = DSHOT_CMD_MOTOR_STOP; //Command 0 = Motor stop
+       }
+
+       for ( size_t motorNumero = 0; motorNumero < GPF_MOTOR_ITEM_COUNT; motorNumero++ ) {
+        myFc.myDshot.sendCommand(motorNumero, lastDshotCommandSent, false);
+       }
+       sinceChange = 0;
+      }
+
+      
     }
 
     //myFc.toggMainBoardLed();
+
+    //Test
+    
+    //if (myFc.get_black_box_IsEnabled()) {
+      
+     /*
+     
+     myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));
+     myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(micros());
+     myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->println(" abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789");
+
+     if ((GPF_BLACK_BOX_RATE == 0) || (myFc.black_box_sinceLog >= GPF_BLACK_BOX_RATE)) {
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->flush(); 
+        myFc.black_box_sinceLog = 0;
+     }
+     */
+     
+    //}
+    
     
 }
 

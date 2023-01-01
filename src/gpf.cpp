@@ -11,8 +11,10 @@
 #include "Arduino.h"
 #include <EEPROM.h>
 #include "Math.h"
+#include <TimeLib.h>
 #include "gpf.h"
 #include "gpf_debug.h"
+
 
 GPF::GPF() {
     gpf_telemetry_info.battery_voltage           = 0;
@@ -39,18 +41,17 @@ GPF::GPF() {
 void GPF::initialize(gpf_config_struct *ptr) {    
     myConfig_ptr = ptr;
     debug_sincePrint = 0;
-
+    mySdCard.initialize();
+    
     myImu.initialize(ptr);
     myRc.initialize(&Serial7); 
     myRc.setupTelemetry(&gpf_telemetry_info); 
+    myDshot.initialize();
 
     myDisplay.initialize();
-    //myDisplay.setTextSize(4);
-    //myDisplay.setRotation(1);
-    myDisplay.println("GPFlight");
-   
+    myDisplay.println("GPFlight");   
     myTouch.initialize();
-
+    
 }
 
 void GPF::iAmStartingLoopNow(bool syncLoop) {
@@ -273,13 +274,13 @@ void GPF::menu_gotoTestTouchScreen(bool firstTime, int not_used_param_2=0, int n
   
 }
 
-bool GPF::get_arm_IsStickArmed() {    
+bool GPF::get_IsStickInPositionEnabled(uint8_t stick) {    
   bool retour = false;
   unsigned int pos;
 
   if (myConfig_ptr != NULL) {
-    pos    = myRc.getPwmChannelPos(myConfig_ptr->channelMaps[GPF_RC_STICK_ARM]);
-    retour = gpf_util_isPwmChannelAtPos(pos, GPF_RC_CHANNEL_ARM_VALUE);
+    pos    = myRc.getPwmChannelPos(myConfig_ptr->channelMaps[stick]);
+    retour = gpf_util_isPwmChannelAtPos(pos, GPF_RC_CHANNEL_ENABLED_VALUE);
   }
   
   return retour;
@@ -294,6 +295,15 @@ bool GPF::set_arm_IsArmed(bool b) {
   return arm_isArmed;
 }
 
+bool GPF::get_black_box_IsEnabled() {    
+  return black_box_isEnabled;
+}
+
+bool GPF::set_black_box_IsEnabled(bool b) {
+  black_box_isEnabled = b;
+  return black_box_isEnabled;
+}
+
 void GPF::displayArmed() {    
   myDisplay.setTextSize(8);
   myDisplay.setRotation(1);
@@ -305,14 +315,14 @@ void GPF::displayArmed() {
   myDisplay.get_tft()->println();    
 }
 
-void GPF::menu_gotoInfoStats(bool firstTime, int not_used_param_2=0, int not_used_param_3=0) {
+void GPF::menu_gotoInfoStats(bool firstTime, int not_used_param_2=0, int not_used_param_3=0) {  
   uint16_t charHeight = 0;
   uint16_t charWidth  = 0;
   const uint16_t x_pos = 120;
   static elapsedMillis sincePrint = 1001; //pour que le tout s'affiche tout de suite dès le premier appel de la fonction.
   const uint16_t sincePrint_delay = 1000;
 
-  if (firstTime) {
+  if (firstTime) {    
     myDisplay.clearScreen();
     menu_display_button_Exit();
     menu_display_button_Save("Reset Sta");
@@ -333,6 +343,22 @@ void GPF::menu_gotoInfoStats(bool firstTime, int not_used_param_2=0, int not_use
     myDisplay.println("Ver. Prog");
     myDisplay.println("Ver. Conf");
     
+    /*
+    u_int64_t taille = mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->size();
+    myDisplay.print("ferme: ");
+
+    unsigned long myMillis = millis();
+    mySdCard.closeFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);     
+    myDisplay.println(millis() - myMillis);
+
+    myDisplay.print("ouver: ");
+    myMillis = millis();
+    mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);     
+    myDisplay.println(millis() - myMillis);
+    
+    myDisplay.print("taill: ");
+    myDisplay.println(taille);
+    */
   }
 
   if (sincePrint > sincePrint_delay) {
@@ -574,7 +600,7 @@ void GPF::menu_gotoConfigurationChannels(bool firstTime, int rcStick=0, int not_
 
 void GPF::displayAndProcessMenu() {
   bool   firstTime       = false;
-         uint16_t y      = 70;  
+         uint16_t y      = 60;  
   const  uint8_t  y_step = 40;  
          int new_menu_id = menu_current;
   static int menuFunction_param_2 = 0;  
@@ -674,6 +700,14 @@ void GPF::displayAndProcessMenu() {
             menuFunction_param_2 = GPF_RC_STICK_ARM;
             break;        
 
+          case GPF_MENU_CONFIG_CHANNELS_FLIGHT_MODE:
+            menuFunction_param_2 = GPF_RC_STICK_FLIGHT_MODE;
+            break;          
+
+          case GPF_MENU_CONFIG_CHANNELS_BLACK_BOX:
+            menuFunction_param_2 = GPF_RC_STICK_BLACK_BOX;
+            break;            
+
           case GPF_MENU_CONFIG_PID_AXE_ROLL_TERM_PROPORTIONAL:
             menuFunction_param_2 = GPF_AXE_ROLL;
             menuFunction_param_3 = GPF_PID_TERM_PROPORTIONAL;
@@ -768,6 +802,11 @@ void GPF::menu_display_button_BackSpace() {
 void GPF::menu_display_button_Start() {
   button_Start.initButton(myDisplay.get_tft(),60,260,118,36,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,"Start",2);
   button_Start.drawButton();
+}
+
+void GPF::menu_display_button_Reset() {
+  button_Reset.initButton(myDisplay.get_tft(),180,260,118,36,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,"Reset",2);
+  button_Reset.drawButton();
 }
 
 void GPF::menu_display_button_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
@@ -1002,6 +1041,7 @@ void GPF::menu_gotoCalibrationIMU(bool firstTime, int not_used_param_2=0, int no
     myDisplay.clearScreen();
     menu_display_button_Start();
     menu_display_button_Exit();
+    menu_display_button_Reset();
 
     myDisplay.setTextSize(2);
     myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
@@ -1118,6 +1158,60 @@ void GPF::menu_gotoCalibrationIMU(bool firstTime, int not_used_param_2=0, int no
     myTouch.set_waitForUnTouch(true);
    }
 
+   if (button_Reset.contains(pixelX, pixelY)) {
+    DEBUG_GPF_PRINT("Reset offsets ");
+    DEBUG_GPF_PRINTLN(__func__);
+
+    myImu.calibration_offset_ax = 0;
+    myImu.calibration_offset_ay = 0;
+    myImu.calibration_offset_az = 0;
+
+    myImu.calibration_offset_gx = 0;
+    myImu.calibration_offset_gy = 0;
+    myImu.calibration_offset_gz = 0;
+
+    myDisplay.get_tft()->fillRect(0, 0, myDisplay.getDisplayWidth(), charHeight * 15, ILI9341_BLACK);    
+
+    myDisplay.get_tft()->setCursor(0,0);  
+    myDisplay.print("Current");
+    myDisplay.get_tft()->setCursor(x_pos,0);  
+    myDisplay.println("Nouvelles");
+
+    myDisplay.print("ax ");
+    myDisplay.print(myConfig_ptr->imuOffsets[GPF_IMU_SENSOR_ACCELEROMETER][GPF_IMU_AXE_X]);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.calibration_offset_ax);
+
+    myDisplay.print("ay ");
+    myDisplay.print(myConfig_ptr->imuOffsets[GPF_IMU_SENSOR_ACCELEROMETER][GPF_IMU_AXE_Y]);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.calibration_offset_ay);
+
+    myDisplay.print("az ");
+    myDisplay.print(myConfig_ptr->imuOffsets[GPF_IMU_SENSOR_ACCELEROMETER][GPF_IMU_AXE_Z]);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.calibration_offset_az);
+
+    myDisplay.print("gx ");
+    myDisplay.print(myConfig_ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_X]);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.calibration_offset_gx);
+
+    myDisplay.print("gy ");
+    myDisplay.print(myConfig_ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_Y]);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.calibration_offset_gy);
+
+    myDisplay.print("gz ");
+    myDisplay.print(myConfig_ptr->imuOffsets[GPF_IMU_SENSOR_GYROSCOPE][GPF_IMU_AXE_Z]);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.calibration_offset_gz);
+
+    menu_display_button_Save("Save");
+    
+    myTouch.set_waitForUnTouch(true);
+   }
+
   }        
 
 }
@@ -1154,6 +1248,7 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
     myDisplay.println(" Z deg");
     myDisplay.println(" Z/pitch");
     myDisplay.println(" Z/roll");
+    myDisplay.println("Err count");
   }
 
   if (sincePrint > sincePrint_delay) {
@@ -1223,6 +1318,10 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
     myDisplay.println(myImu.output_z_0_360_roll);
+
+    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
+    myDisplay.println(myImu.errorCount);
 
   }
 
@@ -1317,4 +1416,114 @@ float GPF::getLoopFrequency() {
   #endif
 */
   return retour;
+}
+
+unsigned long GPF::get_loopCount() {
+  return loopCount;
+}
+
+void GPF::manageAlarms() {
+  const uint16_t ALARM_TOGGLE_RURATION = 1000; //ms
+  static elapsedMillis sinceChange = 0;
+  static bool          sirenAlarmToneToggle  = false;
+  //alarmVoltageLow = true; //test
+
+  if (alarmVoltageLow | alarmImuProblem) {
+    if (sinceChange > ALARM_TOGGLE_RURATION) {
+      if (sirenAlarmToneToggle)  {
+       gpf_util_beep(GPF_UTIL_BEEP_TONE_ALARM); 
+      } else {       
+       gpf_util_beep(GPF_UTIL_BEEP_TONE_INFO); 
+      }
+      sirenAlarmToneToggle = !sirenAlarmToneToggle;
+      sinceChange = 0;
+    }
+
+  } else {
+    noTone(GPF_MISC_PIN_BUZZER);     // Stop sound...
+  }
+}
+
+char* GPF::get_dateTimeString(uint8_t format, bool addSpace) {
+   int i;
+   char tmpBuffer[6]       = "";
+
+   strcpy(dateTimeString,"");
+
+   itoa(year(), tmpBuffer, 10);
+   strcat(dateTimeString, tmpBuffer); //4
+
+   if (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1) {
+    strcat(dateTimeString,"-"); //1
+   }
+    
+   i = month();
+   if (i < 10) {
+    strcat(dateTimeString,"0");
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(dateTimeString, tmpBuffer); //2
+
+   if (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1) {
+    strcat(dateTimeString,"-"); //1
+   }
+
+   i = day();
+   if (i < 10) {
+    strcat(dateTimeString,"0");    
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(dateTimeString, tmpBuffer); //2
+
+   strcat(dateTimeString, " "); //1
+
+   i = hour();
+   if (i < 10) {
+    strcat(dateTimeString,"0");    
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(dateTimeString, tmpBuffer); //2
+
+   if (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1) {
+    strcat(dateTimeString,":");
+   }
+
+   i = minute();
+   if (i < 10) {
+    strcat(dateTimeString,"0");    
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(dateTimeString, tmpBuffer); //2
+
+   if (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1) {
+    strcat(dateTimeString,":");
+   }
+
+   i = second();
+   if (i < 10) {
+    strcat(dateTimeString,"0");    
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(dateTimeString, tmpBuffer); //2
+
+   if (format == GPF_MISC_FORMAT_DATE_TIME_LOGGING) {      
+     
+     strcat(dateTimeString,".");         
+
+     i = millis() % 1000;
+     if (i < 10) {
+      strcat(dateTimeString,"0");    
+     }
+     if (i < 100) {
+      strcat(dateTimeString,"0");    
+     }
+     itoa(i, tmpBuffer, 10);
+     strcat(dateTimeString, tmpBuffer); //3
+     
+     if (addSpace) {
+        strcat(dateTimeString," "); //1
+     }
+   }
+
+   return dateTimeString;
 }

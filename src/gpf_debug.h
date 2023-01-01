@@ -14,7 +14,7 @@
 //#define DEBUG_GPF_CRSF_ENABLED
 #define DEBUG_GPF_CRSF_DELAY       1000
 
-//#define DEBUG_GPF_MPU6050_ENABLED
+#define DEBUG_GPF_MPU6050_ENABLED
 #define DEBUG_GPF_MPU6050_DELAY    25
 
 //#define DEBUG_GPF_DISPLAY_ENABLED
@@ -22,6 +22,9 @@
 
 //#define DEBUG_GPF_TOUCH_ENABLED
 #define DEBUG_GPF_TOUCH_DELAY    1000
+
+//#define DEBUG_GPF_SDCARD_ENABLED
+#define DEBUG_GPF_SDCARD_DELAY    1000
 
 #ifdef DEBUG_GPF_ENABLED
  #define DebugStream_GPF                   Serial //Port USB
@@ -72,6 +75,16 @@
  #define DebugStream_GPF_TOUCH              
  #define DEBUG_GPF_TOUCH_PRINT(...)         
  #define DEBUG_GPF_TOUCH_PRINTLN(...)       
+#endif
+
+#ifdef DEBUG_GPF_SDCARD_ENABLED
+ #define DebugStream_GPF_SDCARD              Serial //Port USB
+ #define DEBUG_GPF_SDCARD_PRINT(...)         DebugStream_GPF_SDCARD.print(__VA_ARGS__)
+ #define DEBUG_GPF_SDCARD_PRINTLN(...)       DebugStream_GPF_SDCARD.println(__VA_ARGS__)
+#else
+ #define DebugStream_GPF_SDCARD              
+ #define DEBUG_GPF_SDCARD_PRINT(...)         
+ #define DEBUG_GPF_SDCARD_PRINTLN(...)       
 #endif
 
 #endif

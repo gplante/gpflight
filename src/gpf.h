@@ -15,6 +15,8 @@
 #include <font_Arial.h> // from ILI9341_t3
 #include "gpf_display.h"
 #include "gpf_touch.h"
+#include "gpf_sdcard.h"
+#include "gpf_dshot.h"
 
 class GPF {
     typedef void (GPF::*method_function)(bool, int, int);
@@ -35,10 +37,14 @@ class GPF {
         void waitUntilNextLoop();
         void toggMainBoardLed();
         void genDummyTelemetryData();
+        unsigned long get_loopCount();
+        void manageAlarms();
         
-        bool get_arm_IsStickArmed();
+        bool get_IsStickInPositionEnabled(uint8_t stick);
         bool get_arm_IsArmed();
         bool set_arm_IsArmed(bool);
+        bool get_black_box_IsEnabled();
+        bool set_black_box_IsEnabled(bool);
         void displayArmed();        
 
         void displayAndProcessMenu();
@@ -47,6 +53,7 @@ class GPF {
         void menu_display_button_Save(const char *caption); //Peut servir aussi comme bouton avec un caption différent
         void menu_display_button_BackSpace();
         void menu_display_button_Start();
+        void menu_display_button_Reset();
         void menu_display_button_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 
         void menu_gotoTestTouchScreen(bool, int, int);        
@@ -62,6 +69,8 @@ class GPF {
         GPF_CRSF     myRc;
         GPF_DISPLAY  myDisplay;
         GPF_TOUCH    myTouch;
+        GPF_SDCARD   mySdCard;
+        GPF_DSHOT    myDshot;
 
         gpf_telemetry_info_s gpf_telemetry_info;
         int16_t  menu_current  = GPF_MENU_MAIN_MENU;
@@ -72,11 +81,18 @@ class GPF {
         Adafruit_GFX_Button_2 button_Save;
         Adafruit_GFX_Button_2 button_BackSpace;
         Adafruit_GFX_Button_2 button_Start;
+        Adafruit_GFX_Button_2 button_Reset;
         Adafruit_GFX_Button_2 buttons[GPF_MISC_NUMBER_OF_BUTTONS];
-        
+        elapsedMillis black_box_sinceLog    = 0;
+
+        char     dateTimeString[25] = ""; //Augmenter au besoin si on ajoute des choses dans la fonction ci-dessous.
+        char*    get_dateTimeString(uint8_t format, bool addSpace);
+
+        bool          alarmVoltageLow = false;  
+        bool          alarmImuProblem = false;  
 
     private:
-        elapsedMillis debug_sincePrint;
+        elapsedMillis debug_sincePrint;        
         unsigned long loopCount             = 0;
         unsigned long loopStartedAt         = 0; //us
         unsigned long firstLoopStartedAt    = 0; //us
@@ -92,9 +108,10 @@ class GPF {
         gpf_config_struct *myConfig_ptr = NULL;
         bool          arm_isArmed = false;
         //bool          arm_pleaseDesarmFirst = true;
-        bool          arm_allowArming = false;
+        bool          arm_allowArming     = false;
+        bool          black_box_isEnabled = false;
         
-        char   gpf_rc_stick_descriptions[GPF_RC_STICK_ITEM_COUNT][9]  = {"Roll", "Pitch", "Throttle", "Yaw", "Arm"}; //Max 8 carac. sinon augmenter taille tableau
+        char   gpf_rc_stick_descriptions[GPF_RC_STICK_ITEM_COUNT][12] = {"Roll", "Pitch", "Throttle", "Yaw", "Arm", "Flight Mode", "Black Box"}; //Max 11 carac. sinon augmenter taille tableau
         char   gpf_axe_descriptions[GPF_AXE_ITEM_COUNT][6]            = {"Roll", "Pitch", "Yaw"}; //Max 5 carac. sinon augmenter taille tableau
         char   gpf_pid_term_descriptions[GPF_PID_TERM_ITEM_COUNT][2]  = {"P", "I", "D"}; //Max 1 carac. sinon augmenter taille tableau
 
@@ -114,6 +131,8 @@ class GPF {
                        { GPF_MENU_CONFIG_CHANNELS_THROTTLE, GPF_MENU_CONFIG_CHANNELS_MENU, "Throttle",&GPF::menu_gotoConfigurationChannels},
                        { GPF_MENU_CONFIG_CHANNELS_YAW, GPF_MENU_CONFIG_CHANNELS_MENU, "Yaw",&GPF::menu_gotoConfigurationChannels},
                        { GPF_MENU_CONFIG_CHANNELS_ARM, GPF_MENU_CONFIG_CHANNELS_MENU, "Arm",&GPF::menu_gotoConfigurationChannels},
+                       { GPF_MENU_CONFIG_CHANNELS_FLIGHT_MODE, GPF_MENU_CONFIG_CHANNELS_MENU, "Flight Mode",&GPF::menu_gotoConfigurationChannels},
+                       { GPF_MENU_CONFIG_CHANNELS_BLACK_BOX, GPF_MENU_CONFIG_CHANNELS_MENU, "Black Box",&GPF::menu_gotoConfigurationChannels},
                     { GPF_MENU_CONFIG_PID_MENU, GPF_MENU_CONFIG_MENU, "PIDs",NULL},
                        { GPF_MENU_CONFIG_PID_AXE_ROLL_MENU, GPF_MENU_CONFIG_PID_MENU, "PID Roll",NULL},
                           { GPF_MENU_CONFIG_PID_AXE_ROLL_TERM_PROPORTIONAL, GPF_MENU_CONFIG_PID_AXE_ROLL_MENU, "Roll P Gain",&GPF::menu_gotoConfigurationPID},
