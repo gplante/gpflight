@@ -12,6 +12,7 @@
  * (Un Merci spécial à Arda Yiğit qui a bien voulu répondre à certaines interrogations à propos de ce projet)
  * 
  * Autres sources utiles:
+ * https://brushlesswhoop.com/dshot-and-bidirectional-dshot/
  * https://github.com/betaflight/betaflight/pull/1282
  * https://github.com/betaflight/betaflight/wiki/DSHOT-ESC-Protocol
  * https://www.swallenhardware.io/battlebots/2019/4/20/a-developers-guide-to-dshot-escs#:~:text=DShot%20is%20a%20digital%20protocol,ranging%20from%200%20to%202047

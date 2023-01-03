@@ -10,7 +10,7 @@
 #define GPF_CONS_H
 
 #define GPF_MISC_PROG_CURRENT_VERSION    101
-#define GPF_MISC_CONFIG_CURRENT_VERSION  8
+#define GPF_MISC_CONFIG_CURRENT_VERSION  10
 #define GPF_MISC_NUMBER_OF_BUTTONS       20
 #define GPF_MISC_PIN_BUZZER              33
 
@@ -124,10 +124,37 @@ typedef enum {
 #define GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL 6
 #define GPF_RC_STICK_BLACK_BOX_DEFAULT_CHANNEL   7
 
+#define GPF_RC_CHANNEL_VALUE_MIN 1000.0 //us
+#define GPF_RC_CHANNEL_VALUE_MID 1500.0 //us
+#define GPF_RC_CHANNEL_VALUE_MAX 2000.0 //us
+
+
+//Controller parameters (take note of defaults before modifying!): 
+#define GPF_CONTROLLER_I_LIMIT           25.0     //Integrator saturation level, mostly for safety (default 25.0)
+
+#define GPF_CONTROLLER_MAX_DEGREE_ROLL   30.0     //Max roll  angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode 
+#define GPF_CONTROLLER_MAX_DEGREE_PITCH  30.0     //Max pitch angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
+#define GPF_CONTROLLER_MAX_DEGREE_YAW   160.0     //Max yaw rate in deg/sec
+
+#define GPF_CONTROLLER_Kp_roll_angle   0.2    //Roll P-gain - angle mode 
+#define GPF_CONTROLLER_Ki_roll_angle   0.3    //Roll I-gain - angle mode
+#define GPF_CONTROLLER_Kd_roll_angle   0.05   //Roll D-gain - angle mode (has no effect on controlANGLE2)
+//float B_loop_roll = 0.9;      //Roll damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
+#define GPF_CONTROLLER_Kp_pitch_angle  0.2   //Pitch P-gain - angle mode
+#define GPF_CONTROLLER_Ki_pitch_angle  0.3   //Pitch I-gain - angle mode
+#define GPF_CONTROLLER_Kd_pitch_angle  0.05  //Pitch D-gain - angle mode (has no effect on controlANGLE2)
+//float B_loop_pitch = 0.9;     //Pitch damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
+
+#define GPF_CONTROLLER_Kp_yaw  0.3           //Yaw P-gain
+#define GPF_CONTROLLER_Ki_yaw  0.05          //Yaw I-gain
+#define GPF_CONTROLLER_Kd_yaw  0.00015       //Yaw D-gain (be careful when increasing too high, motors will begin to overheat!)
+
+
+
 #define GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION 150 //us
 #define GPF_RC_CHANNEL_ENABLED_VALUE           1750 //us //Pour le moment, tous les sticks (Arm et BlackBox) utilisent cette valeur
 
-#define GPF_MAIN_LOOP_RATE             1000 //500 //us (250=4000hz, 500=2000hz, 1000=1000hz, 2000=500hz, ...) //Maximum atteignable d'environ 6000hz avec un Teensy 4.1
+#define GPF_MAIN_LOOP_RATE             500 //1000 //500 //us (250=4000hz, 500=2000hz, 1000=1000hz, 2000=500hz, ...) //Maximum atteignable d'environ 6000hz avec un Teensy 4.1
 #define GPF_MAIN_LED_TOGGLE_DURATION   500 //ms
 #define GPF_BLACK_BOX_RATE             5000 //ms //0 = on log tous le temps à chaque tour de loop
 

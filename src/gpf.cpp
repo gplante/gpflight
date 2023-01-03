@@ -55,22 +55,9 @@ void GPF::initialize(gpf_config_struct *ptr) {
 }
 
 void GPF::iAmStartingLoopNow(bool syncLoop) {
- /*
- static int cpt = 0;
 
- cpt++;
- if (cpt == 3) {
-  resetLoopStats();
- }
- */
-
- if (firstLoopStartedAt == 0) {
-     // Uniquement lors de la première loop, on attend le début de la prochaine milliseconde 
-     // histoire que nos stats soient le plus précis possible
-     //unsigned long current_micros = micros();
-     //unsigned long delay_us = 1000 - (current_micros % 1000);
-     //delayMicroseconds(delay_us);
-     firstLoopStartedAt = micros();
+ if (firstLoopStartedAt == 0) { 
+   firstLoopStartedAt = micros();
  }
  
  loopBusyTime    = micros() - loopStartedAt;
@@ -601,7 +588,8 @@ void GPF::menu_gotoConfigurationChannels(bool firstTime, int rcStick=0, int not_
 void GPF::displayAndProcessMenu() {
   bool   firstTime       = false;
          uint16_t y      = 60;  
-  const  uint8_t  y_step = 40;  
+  //const  uint8_t  y_step = 40;  
+  const  uint8_t  y_step = 34;  
          int new_menu_id = menu_current;
   static int menuFunction_param_2 = 0;  
   static int menuFunction_param_3 = 0;  
@@ -636,7 +624,8 @@ void GPF::displayAndProcessMenu() {
 
    for (size_t menu_id = 0; menu_id < GPF_MENU_ITEM_COUNT; menu_id++) {
     if ((gpf_menuItems[menu_id].parent_id == menu_current) && ((gpf_menuItems[menu_id].id != GPF_MENU_MAIN_MENU))) {
-     gpf_menuItems[menu_id].button.initButton(myDisplay.get_tft(),120,y,236,36,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,gpf_menuItems[menu_id].caption,2);
+     //gpf_menuItems[menu_id].button.initButton(myDisplay.get_tft(),120,y,236,36,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,gpf_menuItems[menu_id].caption,2);
+     gpf_menuItems[menu_id].button.initButton(myDisplay.get_tft(),120,y,236,30,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,gpf_menuItems[menu_id].caption,2);
      gpf_menuItems[menu_id].button.drawButton();
      y = y + y_step;
     }
@@ -1240,14 +1229,8 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
     myDisplay.println(" gy");
     myDisplay.println(" gz");
     myDisplay.println(" Pitch deg");
-    myDisplay.println("       180");
-    myDisplay.println("       360");
     myDisplay.println(" Roll deg");
-    myDisplay.println("      180");
-    myDisplay.println("      360");
     myDisplay.println(" Z deg");
-    myDisplay.println(" Z/pitch");
-    myDisplay.println(" Z/roll");
     myDisplay.println("Err count");
   }
 
@@ -1261,63 +1244,45 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.accX_with_offsets);
+    myDisplay.println(myImu.accX_raw_plus_offsets);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.accY_with_offsets);
+    myDisplay.println(myImu.accY_raw_plus_offsets);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.accZ_with_offsets);
+    myDisplay.println(myImu.accZ_raw_plus_offsets);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.gyrX_with_offsets);
+    myDisplay.println(myImu.gyrX_raw_plus_offsets);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.gyrY_with_offsets);
+    myDisplay.println(myImu.gyrY_raw_plus_offsets);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.gyrZ_with_offsets);
+    myDisplay.println(myImu.gyrZ_raw_plus_offsets);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_pitch_90_90);
+    myDisplay.println(myImu.fusion_degree_pitch);
+
+    //myDisplay.println(myImu.convert_0_360_to_180_180(myImu.output_pitch_0_360));
+    //myDisplay.println(myImu.output_pitch_0_360);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.convert_0_360_to_180_180(myImu.output_pitch_0_360));
+    myDisplay.println(myImu.fusion_degree_roll);
+
+    //myDisplay.println(myImu.convert_0_360_to_180_180(myImu.output_roll_0_360));
+    //myDisplay.println(myImu.output_roll_0_360);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_pitch_0_360);
-
-    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_roll_90_90);
-
-    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.convert_0_360_to_180_180(myImu.output_roll_0_360));
-
-    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_roll_0_360);
-
-    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_z_90_90);
-
-    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_z_0_360_pitch);
-
-    myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
-    myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
-    myDisplay.println(myImu.output_z_0_360_roll);
+    myDisplay.println(myImu.fusion_degree_yaw);
 
     myDisplay.get_tft()->fillRect(x_pos, myDisplay.get_tft()->getCursorY(), myDisplay.getDisplayWidth()-x_pos, charHeight, ILI9341_BLACK);
     myDisplay.get_tft()->setCursor(x_pos,myDisplay.get_tft()->getCursorY());  
@@ -1527,3 +1492,142 @@ char* GPF::get_dateTimeString(uint8_t format, bool addSpace) {
 
    return dateTimeString;
 }
+
+
+void GPF::getDesiredState() {
+  //DESCRIPTION: Normalizes desired control values to appropriate values
+  /*
+   * Updates the desired state variables thro_des, roll_des, pitch_des, and yaw_des. These are computed by using the raw
+   * RC pwm commands and scaling them to be within our limits defined in setup. thro_des stays within 0 to 1 range.
+   * roll_des and pitch_des are scaled to be within max roll/pitch amount in either degrees (angle mode) or degrees/sec
+   * (rate mode). yaw_des is scaled to be within max yaw in degrees/sec. Also creates roll_passthru, pitch_passthru, and
+   * yaw_passthru variables, to be used in commanding motors/servos with direct unstabilized commands in controlMixer().
+   */
+
+  desired_state_throttle = (myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_THROTTLE]) - GPF_RC_CHANNEL_VALUE_MIN)/1000.0; //Between 0 and 1
+  desired_state_roll     = (myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_ROLL])- GPF_RC_CHANNEL_VALUE_MID)/500.0; //Between -1 and 1
+  desired_state_pitch    = (myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_PITCH])- GPF_RC_CHANNEL_VALUE_MID)/500.0; //Between -1 and 1
+  desired_state_yaw      = (myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_YAW])- GPF_RC_CHANNEL_VALUE_MID)/500.0; //Between -1 and 1
+
+  passthru_roll  = desired_state_roll/2.0;  //Between -0.5 and 0.5
+  passthru_pitch = desired_state_pitch/2.0; //Between -0.5 and 0.5
+  passthru_yaw   = desired_state_yaw/2.0;   //Between -0.5 and 0.5
+  
+  //Constrain within normalized bounds
+  desired_state_throttle = constrain(desired_state_throttle, 0.0, 1.0); //Between 0 and 1
+  desired_state_roll     = constrain(desired_state_roll, -1.0, 1.0)*GPF_CONTROLLER_MAX_DEGREE_ROLL; //Between -GPF_CONTROLLER_MAX_DEGREE_ROLL and +GPF_CONTROLLER_MAX_DEGREE_ROLL
+  desired_state_pitch    = constrain(desired_state_pitch, -1.0, 1.0)*GPF_CONTROLLER_MAX_DEGREE_PITCH; //Between -GPF_CONTROLLER_MAX_DEGREE_PITCH and +GPF_CONTROLLER_MAX_DEGREE_PITCH
+  desired_state_yaw      = constrain(desired_state_yaw, -1.0, 1.0)*GPF_CONTROLLER_MAX_DEGREE_YAW; //Between -GPF_CONTROLLER_MAX_DEGREE_YAW and +GPF_CONTROLLER_MAX_DEGREE_YAW
+
+  passthru_roll  = constrain(passthru_roll, -0.5, 0.5);
+  passthru_pitch = constrain(passthru_pitch, -0.5, 0.5);
+  passthru_yaw   = constrain(passthru_yaw, -0.5, 0.5);
+
+}
+
+void GPF::controlANGLE() {
+  //DESCRIPTION: Computes control commands based on state error (angle)
+  /*
+   * Basic PID control to stablize on angle setpoint based on desired states roll_des, pitch_des, and yaw_des computed in 
+   * getDesState(). Error is simply the desired state minus the actual state (ex. roll_des - roll_IMU). Two safety features
+   * are implimented here regarding the I terms. The I terms are saturated within specified limits on startup to prevent 
+   * excessive buildup. This can be seen by holding the vehicle at an angle and seeing the motors ramp up on one side until
+   * they've maxed out throttle...saturating I to a specified limit fixes this. The second feature defaults the I terms to 0
+   * if the throttle is at the minimum setting. This means the motors will not start spooling up on the ground, and the I 
+   * terms will always start from 0 on takeoff. This function updates the variables roll_PID, pitch_PID, and yaw_PID which
+   * can be thought of as 1-D stablized signals. They are mixed to the configuration of the vehicle in controlMixer().
+   */
+
+  const uint16_t THROTTLE_MINIMUM = 1060;
+  static unsigned long micros_previous = 0;
+  unsigned long current_time = micros();
+  float time_elapsed = (current_time - micros_previous)/1000000.0;
+  micros_previous = micros();
+
+  //Roll
+  error_roll = desired_state_roll - myImu.fusion_degree_roll ; //roll_IMU;
+  integral_roll = integral_roll_prev + error_roll*time_elapsed;
+  if (myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_THROTTLE]) < THROTTLE_MINIMUM) {   //Don't let integrator build if throttle is too low
+    integral_roll = 0;
+  }
+  integral_roll = constrain(integral_roll, -GPF_CONTROLLER_I_LIMIT, GPF_CONTROLLER_I_LIMIT); //Saturate integrator to prevent unsafe buildup
+  derivative_roll = myImu.gyrX_output; //GyroX;
+  roll_PID = 0.01*(GPF_CONTROLLER_Kp_roll_angle*error_roll + GPF_CONTROLLER_Ki_roll_angle*integral_roll - GPF_CONTROLLER_Kd_roll_angle*derivative_roll); //Scaled by .01 to bring within -1 to 1 range
+
+  //Pitch
+  error_pitch = desired_state_pitch - myImu.fusion_degree_pitch;
+  integral_pitch = integral_pitch_prev + error_pitch*time_elapsed;
+  if (myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_THROTTLE]) < THROTTLE_MINIMUM) {   //Don't let integrator build if throttle is too low
+    integral_pitch = 0;
+  }
+  integral_pitch = constrain(integral_pitch, -GPF_CONTROLLER_I_LIMIT, GPF_CONTROLLER_I_LIMIT); //Saturate integrator to prevent unsafe buildup
+  derivative_pitch = myImu.gyrY_output;
+  pitch_PID = .01*(GPF_CONTROLLER_Kp_pitch_angle*error_pitch + GPF_CONTROLLER_Ki_pitch_angle*integral_pitch - GPF_CONTROLLER_Kd_pitch_angle*derivative_pitch); //Scaled by .01 to bring within -1 to 1 range
+
+  //Yaw, stablize on rate from GyroZ
+  error_yaw = desired_state_yaw - myImu.gyrZ_output;
+  integral_yaw = integral_yaw_prev + error_yaw*time_elapsed;
+  if (myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_THROTTLE]) < THROTTLE_MINIMUM) {   //Don't let integrator build if throttle is too low
+    integral_yaw = 0;
+  }
+  integral_yaw = constrain(integral_yaw, -GPF_CONTROLLER_I_LIMIT, GPF_CONTROLLER_I_LIMIT); //Saturate integrator to prevent unsafe buildup
+  derivative_yaw = (error_yaw - error_yaw_prev)/time_elapsed; 
+  yaw_PID = .01*(GPF_CONTROLLER_Kp_yaw*error_yaw + GPF_CONTROLLER_Ki_yaw*integral_yaw + GPF_CONTROLLER_Kd_yaw*derivative_yaw); //Scaled by .01 to bring within -1 to 1 range
+
+  //Update roll variables
+  integral_roll_prev = integral_roll;
+  //Update pitch variables
+  integral_pitch_prev = integral_pitch;
+  //Update yaw variables
+  error_yaw_prev = error_yaw;
+  integral_yaw_prev = integral_yaw;
+  
+}
+
+void GPF::controlMixer() {
+  //DESCRIPTION: Mixes scaled commands from PID controller to actuator outputs based on vehicle configuration
+  /*
+   * Takes roll_PID, pitch_PID, and yaw_PID computed from the PID controller and appropriately mixes them for the desired
+   * vehicle configuration. For example on a quadcopter, the left two motors should have +roll_PID while the right two motors
+   * should have -roll_PID. Front two should have -pitch_PID and the back two should have +pitch_PID etc... every motor has
+   * normalized (0 to 1) thro_des command for throttle control. Can also apply direct unstabilized commands from the transmitter with 
+   * roll_passthru, pitch_passthru, and yaw_passthu. mX_command_scaled and sX_command scaled variables are used in scaleCommands() 
+   * in preparation to be sent to the motor ESCs and servos.
+   * 
+   *Relevant variables:
+   *thro_des - direct thottle control
+   *roll_PID, pitch_PID, yaw_PID - stabilized axis variables
+   *roll_passthru, pitch_passthru, yaw_passthru - direct unstabilized command passthrough
+   *channel_6_pwm - free auxillary channel, can be used to toggle things with an 'if' statement
+   */
+   
+  //Quad mixing - EXAMPLE
+  motor_command_scaled[GPF_MOTOR_FRONT_LEFT]  = desired_state_throttle - pitch_PID + roll_PID + yaw_PID; //Front Left //m1
+  motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] = desired_state_throttle - pitch_PID - roll_PID - yaw_PID; //Front Right //m2
+  motor_command_scaled[GPF_MOTOR_BACK_RIGHT]  = desired_state_throttle + pitch_PID - roll_PID + yaw_PID; //Back Right //m3
+  motor_command_scaled[GPF_MOTOR_BACK_LEFT]   = desired_state_throttle + pitch_PID + roll_PID - yaw_PID; //Back Left //m4
+ 
+}
+
+void GPF::scaleCommands() {
+  
+  //Dshot commands: 48 = Throttle 0% à 2047 = Throttle 100%
+  const uint16_t DSHOT_MIN_THROTTLE = 48;
+  const uint16_t DSHOT_MAX_THROTTLE = 2047;
+  const uint16_t DSHOT_RESOLUTION   = DSHOT_MAX_THROTTLE - DSHOT_MIN_THROTTLE + 1;
+
+  //Scaled to 48 to 2000 for dshot protocol
+  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = motor_command_scaled[GPF_MOTOR_FRONT_LEFT] * DSHOT_RESOLUTION + DSHOT_MIN_THROTTLE; //m1
+  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] * DSHOT_RESOLUTION + DSHOT_MIN_THROTTLE; //m2
+  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = motor_command_scaled[GPF_MOTOR_BACK_RIGHT] * DSHOT_RESOLUTION + DSHOT_MIN_THROTTLE; //m3
+  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = motor_command_scaled[GPF_MOTOR_BACK_LEFT] * DSHOT_RESOLUTION + DSHOT_MIN_THROTTLE; //m4
+  
+  //Constrain commands to motors within dshot bounds
+  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT], DSHOT_MIN_THROTTLE, DSHOT_MAX_THROTTLE); //m1
+  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT], DSHOT_MIN_THROTTLE, DSHOT_MAX_THROTTLE); //m2
+  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT], DSHOT_MIN_THROTTLE, DSHOT_MAX_THROTTLE); //m3
+  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_LEFT], DSHOT_MIN_THROTTLE, DSHOT_MAX_THROTTLE); //m4
+
+}
+
+

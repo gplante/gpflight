@@ -8,13 +8,16 @@
 #ifndef GPF_DEBUG_H
 #define GPF_DEBUG_H
 
-#define DEBUG_GPF_ENABLED
+//#define DEBUG_GPF_ENABLED
 #define DEBUG_GPF_DELAY            1000
 
 //#define DEBUG_GPF_CRSF_ENABLED
 #define DEBUG_GPF_CRSF_DELAY       1000
 
-#define DEBUG_GPF_MPU6050_ENABLED
+#define DEBUG_GPF_IMU_ENABLED
+#define DEBUG_GPF_IMU_DELAY       10
+
+//#define DEBUG_GPF_MPU6050_ENABLED
 #define DEBUG_GPF_MPU6050_DELAY    25
 
 //#define DEBUG_GPF_DISPLAY_ENABLED
@@ -45,6 +48,16 @@
  #define DebugStream_GPF_CRSF              
  #define DEBUG_GPF_CRSF_PRINT(...)         
  #define DEBUG_GPF_CRSF_PRINTLN(...)       
+#endif
+
+#ifdef DEBUG_GPF_IMU_ENABLED
+ #define DebugStream_GPF_IMU           Serial //Port USB
+ #define DEBUG_GPF_IMU_PRINT(...)      DebugStream_GPF_IMU.print(__VA_ARGS__)
+ #define DEBUG_GPF_IMU_PRINTLN(...)    DebugStream_GPF_IMU.println(__VA_ARGS__)
+#else
+ #define DebugStream_GPF_IMU
+ #define DEBUG_GPF_IMU_PRINT(...)         
+ #define DEBUG_GPF_IMU_PRINTLN(...)       
 #endif
 
 #ifdef DEBUG_GPF_MPU6050_ENABLED

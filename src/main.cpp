@@ -23,7 +23,7 @@
 #include "gpf_cons.h"
 #include "gpf_telemetry.h"
 #include "gpf.h"
-#include "gpf_mpu6050.h"
+#include "gpf_imu.h"
 #include "gpf_debug.h"
 #include "gpf_crsf.h"
 #include "gpf_util.h"
@@ -151,9 +151,15 @@ void loop() {
     myFc.set_arm_IsArmed(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_ARM));
     myFc.set_black_box_IsEnabled(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_BLACK_BOX));
 
+/*
     if (!myFc.myImu.readSensorsAndDoCalculations()) { //Armé ou non, on va toujours lire le IMU
-     //myFc.alarmImuProblem = true; //test
     }
+*/    
+
+    if (myFc.myImu.getIMUData()) { //Armé ou non, on va toujours lire le IMU
+     myFc.myImu.doFusion_madgwick6DOF();
+    }
+
     myFc.manageAlarms();
     myFc.set_arm_IsArmed(false); //test remporaire
 

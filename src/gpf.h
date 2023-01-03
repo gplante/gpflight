@@ -9,7 +9,7 @@
 #define GPF_H
 
 #include "gpf_cons.h"
-#include "gpf_mpu6050.h"
+#include "gpf_imu.h"
 #include "gpf_telemetry.h"
 #include "gpf_crsf.h"
 #include <font_Arial.h> // from ILI9341_t3
@@ -33,12 +33,17 @@ class GPF {
         GPF();
         void initialize(gpf_config_struct *);
         void iAmStartingLoopNow(bool);
+        //unsigned long getElapsedLoopTime();
         void resetLoopStats();
         void waitUntilNextLoop();
         void toggMainBoardLed();
         void genDummyTelemetryData();
         unsigned long get_loopCount();
         void manageAlarms();
+        void getDesiredState();   
+        void controlANGLE();
+        void controlMixer();
+        void scaleCommands();
         
         bool get_IsStickInPositionEnabled(uint8_t stick);
         bool get_arm_IsArmed();
@@ -65,7 +70,8 @@ class GPF {
         void menu_gotoCalibrationIMU(bool, int, int);
         void menu_gotoDisplayAllPIDs(bool, int, int);
         
-        GPF_MPU6050  myImu;
+        //GPF_MPU6050  myImu;
+        GPF_IMU      myImu;
         GPF_CRSF     myRc;
         GPF_DISPLAY  myDisplay;
         GPF_TOUCH    myTouch;
@@ -91,6 +97,19 @@ class GPF {
         bool          alarmVoltageLow = false;  
         bool          alarmImuProblem = false;  
 
+        //Normalized desired state:
+        float desired_state_throttle, desired_state_roll, desired_state_pitch, desired_state_yaw;
+        float passthru_roll, passthru_pitch, passthru_yaw;
+
+        //Controller:
+        float error_roll, error_roll_prev, roll_des_prev, integral_roll, integral_roll_il, integral_roll_ol, integral_roll_prev, integral_roll_prev_il, integral_roll_prev_ol, derivative_roll, roll_PID = 0;
+        float error_pitch, error_pitch_prev, pitch_des_prev, integral_pitch, integral_pitch_il, integral_pitch_ol, integral_pitch_prev, integral_pitch_prev_il, integral_pitch_prev_ol, derivative_pitch, pitch_PID = 0;
+        float error_yaw, error_yaw_prev, integral_yaw, integral_yaw_prev, derivative_yaw, yaw_PID = 0;
+
+        //Mixer
+        float motor_command_scaled[GPF_MOTOR_ITEM_COUNT];
+        int motor_command_DSHOT[GPF_MOTOR_ITEM_COUNT];
+
     private:
         elapsedMillis debug_sincePrint;        
         unsigned long loopCount             = 0;
@@ -111,7 +130,7 @@ class GPF {
         bool          arm_allowArming     = false;
         bool          black_box_isEnabled = false;
         
-        char   gpf_rc_stick_descriptions[GPF_RC_STICK_ITEM_COUNT][12] = {"Roll", "Pitch", "Throttle", "Yaw", "Arm", "Flight Mode", "Black Box"}; //Max 11 carac. sinon augmenter taille tableau
+        char   gpf_rc_stick_descriptions[GPF_RC_STICK_ITEM_COUNT][10] = {"Roll", "Pitch", "Throttle", "Yaw", "Arm", "Mode vol", "Black Box"}; //Max 9 carac. sinon augmenter taille tableau
         char   gpf_axe_descriptions[GPF_AXE_ITEM_COUNT][6]            = {"Roll", "Pitch", "Yaw"}; //Max 5 carac. sinon augmenter taille tableau
         char   gpf_pid_term_descriptions[GPF_PID_TERM_ITEM_COUNT][2]  = {"P", "I", "D"}; //Max 1 carac. sinon augmenter taille tableau
 
@@ -131,7 +150,7 @@ class GPF {
                        { GPF_MENU_CONFIG_CHANNELS_THROTTLE, GPF_MENU_CONFIG_CHANNELS_MENU, "Throttle",&GPF::menu_gotoConfigurationChannels},
                        { GPF_MENU_CONFIG_CHANNELS_YAW, GPF_MENU_CONFIG_CHANNELS_MENU, "Yaw",&GPF::menu_gotoConfigurationChannels},
                        { GPF_MENU_CONFIG_CHANNELS_ARM, GPF_MENU_CONFIG_CHANNELS_MENU, "Arm",&GPF::menu_gotoConfigurationChannels},
-                       { GPF_MENU_CONFIG_CHANNELS_FLIGHT_MODE, GPF_MENU_CONFIG_CHANNELS_MENU, "Flight Mode",&GPF::menu_gotoConfigurationChannels},
+                       { GPF_MENU_CONFIG_CHANNELS_FLIGHT_MODE, GPF_MENU_CONFIG_CHANNELS_MENU, "Mode vol",&GPF::menu_gotoConfigurationChannels},
                        { GPF_MENU_CONFIG_CHANNELS_BLACK_BOX, GPF_MENU_CONFIG_CHANNELS_MENU, "Black Box",&GPF::menu_gotoConfigurationChannels},
                     { GPF_MENU_CONFIG_PID_MENU, GPF_MENU_CONFIG_MENU, "PIDs",NULL},
                        { GPF_MENU_CONFIG_PID_AXE_ROLL_MENU, GPF_MENU_CONFIG_PID_MENU, "PID Roll",NULL},
