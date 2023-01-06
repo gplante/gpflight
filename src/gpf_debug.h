@@ -8,13 +8,13 @@
 #ifndef GPF_DEBUG_H
 #define GPF_DEBUG_H
 
-//#define DEBUG_GPF_ENABLED
+#define DEBUG_GPF_ENABLED
 #define DEBUG_GPF_DELAY            1000
 
 //#define DEBUG_GPF_CRSF_ENABLED
 #define DEBUG_GPF_CRSF_DELAY       1000
 
-#define DEBUG_GPF_IMU_ENABLED
+//#define DEBUG_GPF_IMU_ENABLED
 #define DEBUG_GPF_IMU_DELAY       10
 
 //#define DEBUG_GPF_MPU6050_ENABLED

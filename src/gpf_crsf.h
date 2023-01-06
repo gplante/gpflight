@@ -225,7 +225,7 @@ class GPF_CRSF {
         void readRx();
         unsigned int getPwmChannelValue(uint8_t);
         unsigned int getPwmChannelPos(uint8_t);
-        
+        bool         get_isInFailSafe();
 
         libCrsf_link_statistics_s link_statistics;
         gpf_telemetry_info_s *gpf_telemetry_info_ptr = NULL;
@@ -235,7 +235,7 @@ class GPF_CRSF {
         void    CRC8_createLut(uint8_t);
         uint8_t CRC8_calculate(uint8_t *, int);
         bool    parseFrame();
-        bool    get_isInFailSafe();
+        
         void    refreshTelemetry();
         void    sendTelemetryToTx();
         bool    sendTelemetryItemToTx(uint8_t);

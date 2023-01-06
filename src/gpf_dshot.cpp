@@ -7,9 +7,9 @@
  * Class pour communiquer avec un ou des ESC qui supporte le protocole DSHOT.
  * On ne peut pas utiliser de uart pour celà. 
  * On doit utiliser des DMA sinon écrire sur les pins simplement à l'aide du code via la loop() principale ne serait pas assez rapide à ce que j'ai pu lire sur Internet.
- * Je me suis inspiré du code du projet suivant:
+ * Je me suis fortement inspiré du code du projet suivant:
  * https://github.com/jacqu/teensyshot
- * (Un Merci spécial à Arda Yiğit qui a bien voulu répondre à certaines interrogations à propos de ce projet)
+ * (Un Merci spécial à Arda Yiğit qui a bien voulu répondre à certaines de mes interrogations à propos de ce projet)
  * 
  * Autres sources utiles:
  * https://brushlesswhoop.com/dshot-and-bidirectional-dshot/
@@ -18,6 +18,7 @@
  * https://www.swallenhardware.io/battlebots/2019/4/20/a-developers-guide-to-dshot-escs#:~:text=DShot%20is%20a%20digital%20protocol,ranging%20from%200%20to%202047
  * https://blck.mn/2016/11/dshot-the-new-kid-on-the-block/
  * https://github.com/betaflight/betaflight/issues/673
+ * https://github.com/betaflight/betaflight/blob/master/src/main/drivers/dshot_command.h
  * 
  */
  
@@ -98,17 +99,23 @@ void GPF_DSHOT::initialize() {
   }
 
   for ( motorNumero = 0; motorNumero < GPF_MOTOR_ITEM_COUNT; motorNumero++ ) {
-   sendCommand(motorNumero, DSHOT_CMD_MOTOR_STOP, false);
+   sendCommand(motorNumero, GPF_DSHOT_CMD_MOTOR_STOP, false);
   }  
 }
 
 void GPF_DSHOT::sendCommand( uint8_t motorNumero, uint16_t dshotCommand, bool requestTelemetry) {
+  // Dans le fond, malgré le fait que cette fonction s'appelle sendCommand(), cette fonction en réalité n'envoi rien aux ESC.
+  // Cette fonction met plutôt à jour la variable dma_data[][] qui est utilisée par les eFlexPWM et DMA.
+  // Ce sont ces DMA qui envoi continuellement la commande (signal DSHOT) aux ESC.
+  //
+  //requestTelemetry = Je n'ai pas réussi à faire fonctionner la télémétire mais je laisse le paramètre là quand même pour le moment.
+  
   int       j;  
   uint16_t  data;
 
   // Check cmd value
   if ( dshotCommand > DSHOT_MAX_VALUE ) {
-    dshotCommand = DSHOT_CMD_MOTOR_STOP; 
+    dshotCommand = GPF_DSHOT_CMD_MOTOR_STOP; 
   }
 
   // Initialize DMA buffer  
@@ -132,4 +139,10 @@ void GPF_DSHOT::sendCommand( uint8_t motorNumero, uint16_t dshotCommand, bool re
   // Clear error flag on  DMA channel  
   dma_channel[motorNumero].clearError( );
   dma_channel[motorNumero].enable();
+}
+
+uint16_t GPF_DSHOT::convertThrottlePercentToDshotValue( uint8_t percent) {
+  uint8_t  percentValidated = constrain(percent,0,100);
+ 
+  return GPF_DSHOT_THROTTLE_MINIMUM + (GPF_DSHOT_RESOLUTION * percentValidated / 100.0);
 }

@@ -32,7 +32,6 @@
  */
 
 #define DSHOT_DMA_LENGTH          18            // Number of steps of one DMA sequence (the two last values are zero)
-//#define DSHOT_DMA_LENGTH          16            // Number of steps of one DMA sequence (the two last values are zero)
 //#define DSHOT_DMA_MARGIN          2             // Number of additional bit duration to wait until checking if DMA is over
 #define DSHOT_DSHOT_LENGTH        16            // Number of bits in a DSHOT sequence
 
@@ -47,59 +46,14 @@
 #define DSHOT_SP_DURATION         (625 * DSHOT_DURATION_MULTIPLIER)   // Duration of a DSHOT short pulse in ns
 #define DSHOT_MAX_VALUE           2047          // Maximum DSHOT value
 
-// Code emprunté de https://github.com/betaflight/betaflight/blob/master/src/main/drivers/dshot_command.h le 28 décembre 2022
-
-#define DSHOT_MAX_COMMAND 47
-
-/*
-  DshotSettingRequest (KISS24). Spin direction, 3d and save Settings require 10 requests.. and the TLM Byte must always be high if 1-47 are used to send settings
-  3D Mode:
-  0 = stop
-  48   (low) - 1047 (high) -> negative direction
-  1048 (low) - 2047 (high) -> positive direction
- */
-
-typedef enum {
-    DSHOT_CMD_MOTOR_STOP = 0,
-    DSHOT_CMD_BEACON1,
-    DSHOT_CMD_BEACON2,
-    DSHOT_CMD_BEACON3,
-    DSHOT_CMD_BEACON4,
-    DSHOT_CMD_BEACON5,
-    DSHOT_CMD_ESC_INFO, // V2 includes settings
-    DSHOT_CMD_SPIN_DIRECTION_1,
-    DSHOT_CMD_SPIN_DIRECTION_2,
-    DSHOT_CMD_3D_MODE_OFF,
-    DSHOT_CMD_3D_MODE_ON,
-    DSHOT_CMD_SETTINGS_REQUEST, // Currently not implemented
-    DSHOT_CMD_SAVE_SETTINGS,
-    DSHOT_CMD_EXTENDED_TELEMETRY_ENABLE,
-    DSHOT_CMD_EXTENDED_TELEMETRY_DISABLE,
-    DSHOT_CMD_SPIN_DIRECTION_NORMAL = 20,
-    DSHOT_CMD_SPIN_DIRECTION_REVERSED = 21,
-    DSHOT_CMD_LED0_ON, // BLHeli32 only
-    DSHOT_CMD_LED1_ON, // BLHeli32 only
-    DSHOT_CMD_LED2_ON, // BLHeli32 only
-    DSHOT_CMD_LED3_ON, // BLHeli32 only
-    DSHOT_CMD_LED0_OFF, // BLHeli32 only
-    DSHOT_CMD_LED1_OFF, // BLHeli32 only
-    DSHOT_CMD_LED2_OFF, // BLHeli32 only
-    DSHOT_CMD_LED3_OFF, // BLHeli32 only
-    DSHOT_CMD_AUDIO_STREAM_MODE_ON_OFF = 30, // KISS audio Stream mode on/Off
-    DSHOT_CMD_SILENT_MODE_ON_OFF = 31, // KISS silent Mode on/Off
-    DSHOT_CMD_MAX = 47
-} dshotCommands_e;
-
-// Fin Code emprunté
-
-
 
 class GPF_DSHOT {
 
     public:
         GPF_DSHOT();
-        void initialize();
-        void sendCommand( uint8_t motorNumero, uint16_t dshotCommand, bool requestTelemetry);
+        void     initialize();
+        void     sendCommand( uint8_t motorNumero, uint16_t dshotCommand, bool requestTelemetry);
+        uint16_t convertThrottlePercentToDshotValue( uint8_t percent);
 
     private:
         const uint16_t DSHOT_short_pulse  = uint64_t(F_TMR) * DSHOT_SP_DURATION / 1000000000;     // DSHOT short pulse duration (nb of F_BUS periods)

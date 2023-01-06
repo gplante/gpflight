@@ -13,8 +13,8 @@
 #include "Math.h"
 #include <TimeLib.h>
 #include "gpf.h"
+#include "gpf_cons.h"
 #include "gpf_debug.h"
-
 
 GPF::GPF() {
     gpf_telemetry_info.battery_voltage           = 0;
@@ -121,16 +121,6 @@ void GPF::resetLoopStats() {
  loopBusyTimeMin       = 999999;
  loopBusyTimeMax       = 0;
  loopTimeOverFlowCount = 0;
-
- //if (firstLoopStartedAt == 0) {
-     // Uniquement lors de la première loop, on attend le début de la prochaine milliseconde 
-     // histoire que nos stats soient le plus précis possible
-     //unsigned long us       = micros();
-     //unsigned long delay_us = 1000 - (us % 1000);
-     //delayMicroseconds(delay_us);
-     //firstLoopStartedAt = micros();
- //}
-
 }
 
 void GPF::waitUntilNextLoop() {
@@ -279,6 +269,9 @@ bool GPF::get_arm_IsArmed() {
 
 bool GPF::set_arm_IsArmed(bool b) {
   arm_isArmed = b && arm_allowArming;
+
+  //todo checkey aussi d'autres conditions comme par exemple si IMU fonctionne bien ???
+  
   return arm_isArmed;
 }
 
@@ -522,7 +515,7 @@ void GPF::menu_gotoConfigurationChannels(bool firstTime, int rcStick=0, int not_
     y = y + buttonSpace;
 
     for (size_t channel = 1; channel <= GPF_RC_NUMBER_CHANNELS; channel++) {
-     menu_display_button_n(channel,x,y,buttonWidth,buttonHeight); 
+     menu_display_button_Numero_n(channel,x,y,buttonWidth,buttonHeight); 
       x = x + buttonWidth + buttonSpace;
       if (x + buttonWidth >= myDisplay.getDisplayWidth()) {
         x = 5;
@@ -594,7 +587,9 @@ void GPF::displayAndProcessMenu() {
   static int menuFunction_param_2 = 0;  
   static int menuFunction_param_3 = 0;  
   
-  arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) && (false); //todo //Il faut être au menu principal et que la switch Arm soit à Off
+  // Quand on consulte/modifi la config via l'écran tactile, par sécurité (car on a le visage proche des hélices) on ne permet pas 
+  // d'armer les moteurs sauf si on est au menu principal et que la switch Arm est présentement à l'état Désarmé.
+  arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) && (!get_IsStickInPositionEnabled(GPF_RC_STICK_ARM));
   
   if (menu_pleaseRefresh) {
    DEBUG_GPF_PRINT(F("menu_current=")); 
@@ -798,11 +793,21 @@ void GPF::menu_display_button_Reset() {
   button_Reset.drawButton();
 }
 
-void GPF::menu_display_button_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+void GPF::menu_display_button_Numero_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
   char caption[3];
   itoa(buttonNumber, caption, 10);
   buttons[buttonNumber].initButton(myDisplay.get_tft(),x + round(w/2),y + round(h/2),w,h,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,caption,2);
   buttons[buttonNumber].drawButton();
+}
+
+void GPF::menu_display_button_Plus_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+  buttons_Plus[buttonNumber].initButton(myDisplay.get_tft(),x + round(w/2),y + round(h/2),w,h,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,"+",2);
+  buttons_Plus[buttonNumber].drawButton();
+}
+
+void GPF::menu_display_button_Minus_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+  buttons_Minus[buttonNumber].initButton(myDisplay.get_tft(),x + round(w/2),y + round(h/2),w,h,ILI9341_YELLOW, ILI9341_BLACK,ILI9341_YELLOW,"-",2);
+  buttons_Minus[buttonNumber].drawButton();
 }
 
 void GPF::saveConfig() {
@@ -861,7 +866,7 @@ void GPF::menu_gotoConfigurationPID(bool firstTime, int axe=0, int pid_term=0) {
      //DEBUG_GPF_PRINT(x); 
      //DEBUG_GPF_PRINT(" y="); 
      //DEBUG_GPF_PRINT(y); 
-     menu_display_button_n(numero,x,y,buttonWidth,buttonHeight); 
+     menu_display_button_Numero_n(numero,x,y,buttonWidth,buttonHeight); 
       x = x + buttonWidth + buttonSpace;
       if (x + buttonWidth >= myDisplay.getDisplayWidth()) {
         x = 5;
@@ -1355,6 +1360,129 @@ void GPF::menu_gotoDisplayAllPIDs(bool firstTime, int not_used_param_2=0, int no
 
 }
 
+void GPF::menu_gotoTestMotors(bool firstTime, int rcStick=0, int not_used_param_3=0) {  
+  uint16_t charHeight = 0;
+  uint16_t charWidth  = 0;
+  uint16_t x          = 0;
+  uint16_t y          = 1;
+
+  uint8_t motorNumber;
+  static uint8_t moteur_speed_percent[GPF_MOTOR_ITEM_COUNT];
+
+  //static uint8_t newChannel     = 0;
+
+  const uint16_t buttonHeight = 50;
+  const uint16_t buttonWidth  = 50;
+  const uint16_t buttonSpace  = 10;
+
+  const uint16_t percentPosX  = 73;
+  const uint16_t percentPosY[GPF_MOTOR_ITEM_COUNT] = {60, 120, 180, 240};
+  const uint8_t  throttleStep  = 5;
+
+  myDisplay.setTextSize(2);
+  myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+
+  if (firstTime) {
+    moteur_speed_percent[GPF_MOTOR_1] = 0;
+    moteur_speed_percent[GPF_MOTOR_2] = 0;
+    moteur_speed_percent[GPF_MOTOR_3] = 0;
+    moteur_speed_percent[GPF_MOTOR_4] = 0;
+
+    myDisplay.clearScreen();
+    menu_display_button_Exit();
+
+    myDisplay.get_tft()->setCursor(0,y);
+    myDisplay.print("**** ATTENTION ****");
+    myDisplay.println();
+    myDisplay.print("ENLEVEZ LES HELICES");
+    myDisplay.println();
+    
+    x = 5;
+    y = myDisplay.get_tft()->getCursorY();    
+    y = y + buttonSpace;
+
+    for (motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) {
+      x = 5;
+      
+      myDisplay.get_tft()->setCursor(x,percentPosY[motorNumber]);
+      myDisplay.print("M");
+      myDisplay.print(motorNumber+1);
+      myDisplay.get_tft()->setCursor(percentPosX,percentPosY[motorNumber]);
+      myDisplay.print(moteur_speed_percent[motorNumber]);
+      myDisplay.print("%");    
+      x = x + buttonWidth + buttonSpace;
+      x = x + buttonWidth + buttonSpace;
+      menu_display_button_Plus_n(motorNumber,x,y,buttonWidth,buttonHeight); 
+      x = x + buttonWidth + buttonSpace;
+      menu_display_button_Minus_n(motorNumber,x,y,buttonWidth,buttonHeight); 
+      y = y + buttonHeight + buttonSpace;
+    }
+  }
+
+  //Affiche le %throttle de chaque moteur
+  for (motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) {
+    myDisplay.get_tft()->fillRect(percentPosX, percentPosY[motorNumber], charWidth * 4, charHeight, ILI9341_BLACK);
+    myDisplay.get_tft()->setCursor(percentPosX,percentPosY[motorNumber]);
+    myDisplay.print(moteur_speed_percent[motorNumber]);
+    myDisplay.print("%");    
+  }
+
+  boolean istouched = myTouch.ts_touched();
+
+  if (istouched) {
+   TS_Point p = myTouch.ts_getPoint();
+
+   int16_t pixelX = GPF_TOUCH::mapTouchXToPixelX(p.x);
+   int16_t pixelY = GPF_TOUCH::mapTouchYToPixelY(p.y);
+
+   for (motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) { 
+     if (buttons_Plus[motorNumber].contains(pixelX, pixelY)) { //Check si il a cliqué sur un des boutons Plus
+      moteur_speed_percent[motorNumber] += throttleStep;
+      if (moteur_speed_percent[motorNumber] > 50) {
+        moteur_speed_percent[motorNumber] = 50;
+      }
+
+      myTouch.set_waitForUnTouch(true);
+     }
+   }
+
+   for (motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) { 
+     if (buttons_Minus[motorNumber].contains(pixelX, pixelY)) { //Check si il a cliqué sur un des boutons Moins      
+      if ((moteur_speed_percent[motorNumber] - throttleStep) >= 0 ) {
+        moteur_speed_percent[motorNumber] -= throttleStep;
+      }
+
+      myTouch.set_waitForUnTouch(true);
+     }
+   }
+
+   if (button_Exit.contains(pixelX, pixelY)) { //Check si il a cliqué sur bouton "Sortir"
+    DEBUG_GPF_PRINT("On sort de la fonction ");
+    DEBUG_GPF_PRINTLN(__func__);
+
+    // *** Important ***, On arrête les moteurs avant de sortir.
+    for (motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) { 
+        moteur_speed_percent[motorNumber] = 0;
+        //La commande GPF_DSHOT_CMD_MOTOR_STOP va être envoyée aux moteurs juste avant la fin de la fonction ci-dessous.
+    }
+
+    menu_current = GPF_MENU_TEST_MENU;
+    menu_pleaseRefresh = true;
+    myTouch.set_waitForUnTouch(true);
+   }
+  }
+  
+  for (motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) {
+    if (moteur_speed_percent[motorNumber] > 0) {
+      motor_command_DSHOT[motorNumber] = myDshot.convertThrottlePercentToDshotValue(moteur_speed_percent[motorNumber]);
+    } else {
+      motor_command_DSHOT[motorNumber] = GPF_DSHOT_CMD_MOTOR_STOP;      
+    }    
+
+    myDshot.sendCommand(motorNumber, motor_command_DSHOT[motorNumber], false);
+  }
+}
+
 float GPF::getLoopFrequency() {
   float         retour                        = 0;
   unsigned long current_micros                = micros();
@@ -1393,7 +1521,7 @@ void GPF::manageAlarms() {
   static bool          sirenAlarmToneToggle  = false;
   //alarmVoltageLow = true; //test
 
-  if (alarmVoltageLow | alarmImuProblem) {
+  if (alarmVoltageLow) {
     if (sinceChange > ALARM_TOGGLE_RURATION) {
       if (sirenAlarmToneToggle)  {
        gpf_util_beep(GPF_UTIL_BEEP_TONE_ALARM); 
@@ -1495,6 +1623,8 @@ char* GPF::get_dateTimeString(uint8_t format, bool addSpace) {
 
 
 void GPF::getDesiredState() {
+  // Cette fonction, légèrement adaptée pour ce projet, provient du projet dRehmFlight VTOL Flight Controller de Nicholas Rehm à https://github.com/nickrehm/dRehmFlight
+
   //DESCRIPTION: Normalizes desired control values to appropriate values
   /*
    * Updates the desired state variables thro_des, roll_des, pitch_des, and yaw_des. These are computed by using the raw
@@ -1522,10 +1652,14 @@ void GPF::getDesiredState() {
   passthru_roll  = constrain(passthru_roll, -0.5, 0.5);
   passthru_pitch = constrain(passthru_pitch, -0.5, 0.5);
   passthru_yaw   = constrain(passthru_yaw, -0.5, 0.5);
-
+  
+  //DEBUG_GPF_PRINT("myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_THROTTLE]:");    
+  //DEBUG_GPF_PRINTLN(myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_THROTTLE]));    
 }
 
 void GPF::controlANGLE() {
+  // Cette fonction, légèrement adaptée pour ce projet, provient du projet dRehmFlight VTOL Flight Controller de Nicholas Rehm à https://github.com/nickrehm/dRehmFlight
+
   //DESCRIPTION: Computes control commands based on state error (angle)
   /*
    * Basic PID control to stablize on angle setpoint based on desired states roll_des, pitch_des, and yaw_des computed in 
@@ -1584,7 +1718,14 @@ void GPF::controlANGLE() {
   
 }
 
+void GPF::controlComplementaryFilter() {
+  
+
+}
+
 void GPF::controlMixer() {
+  // Cette fonction, légèrement adaptée pour ce projet, provient du projet dRehmFlight VTOL Flight Controller de Nicholas Rehm à https://github.com/nickrehm/dRehmFlight
+    
   //DESCRIPTION: Mixes scaled commands from PID controller to actuator outputs based on vehicle configuration
   /*
    * Takes roll_PID, pitch_PID, and yaw_PID computed from the PID controller and appropriately mixes them for the desired
@@ -1607,26 +1748,31 @@ void GPF::controlMixer() {
   motor_command_scaled[GPF_MOTOR_BACK_RIGHT]  = desired_state_throttle + pitch_PID - roll_PID + yaw_PID; //Back Right //m3
   motor_command_scaled[GPF_MOTOR_BACK_LEFT]   = desired_state_throttle + pitch_PID + roll_PID - yaw_PID; //Back Left //m4
  
+  //DEBUG_GPF_PRINT("desired_state_throttle:");    
+  //DEBUG_GPF_PRINTLN(desired_state_throttle);    
+
+  //DEBUG_GPF_PRINT("GPF_MOTOR_1:");    
+  //DEBUG_GPF_PRINTLN(motor_command_scaled[GPF_MOTOR_1]);    
+
+  
 }
 
 void GPF::scaleCommands() {
-  
+  // Cette fonction, légèrement adaptée pour ce projet, provient du projet dRehmFlight VTOL Flight Controller de Nicholas Rehm à https://github.com/nickrehm/dRehmFlight
+    
   //Dshot commands: 48 = Throttle 0% à 2047 = Throttle 100%
-  const uint16_t DSHOT_MIN_THROTTLE = 48;
-  const uint16_t DSHOT_MAX_THROTTLE = 2047;
-  const uint16_t DSHOT_RESOLUTION   = DSHOT_MAX_THROTTLE - DSHOT_MIN_THROTTLE + 1;
-
+  
   //Scaled to 48 to 2000 for dshot protocol
-  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = motor_command_scaled[GPF_MOTOR_FRONT_LEFT] * DSHOT_RESOLUTION + DSHOT_MIN_THROTTLE; //m1
-  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] * DSHOT_RESOLUTION + DSHOT_MIN_THROTTLE; //m2
-  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = motor_command_scaled[GPF_MOTOR_BACK_RIGHT] * DSHOT_RESOLUTION + DSHOT_MIN_THROTTLE; //m3
-  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = motor_command_scaled[GPF_MOTOR_BACK_LEFT] * DSHOT_RESOLUTION + DSHOT_MIN_THROTTLE; //m4
+  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = motor_command_scaled[GPF_MOTOR_FRONT_LEFT]  * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; //m1
+  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; //m2
+  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = motor_command_scaled[GPF_MOTOR_BACK_RIGHT]  * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; //m3
+  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = motor_command_scaled[GPF_MOTOR_BACK_LEFT]   * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; //m4
   
   //Constrain commands to motors within dshot bounds
-  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT], DSHOT_MIN_THROTTLE, DSHOT_MAX_THROTTLE); //m1
-  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT], DSHOT_MIN_THROTTLE, DSHOT_MAX_THROTTLE); //m2
-  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT], DSHOT_MIN_THROTTLE, DSHOT_MAX_THROTTLE); //m3
-  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_LEFT], DSHOT_MIN_THROTTLE, DSHOT_MAX_THROTTLE); //m4
+  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT],  GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); //m1
+  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT], GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); //m2
+  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT],  GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); //m3
+  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_LEFT],   GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); //m4
 
 }
 

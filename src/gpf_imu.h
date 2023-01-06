@@ -27,9 +27,6 @@
 //#define GPF_IMU_ACCEL_8G
 //#define GPF_IMU_ACCEL_16G
 
-#define GPF_IMU_FILTER_WEIGHT_GYRO  0.99   // Le total de GPF_IMU_FILTER_WEIGHT_GYRO + GPF_IMU_FILTER_WEIGHT_ACCEL doit être 1
-#define GPF_IMU_FILTER_WEIGHT_ACCEL 0.01   // Le total de GPF_IMU_FILTER_WEIGHT_GYRO + GPF_IMU_FILTER_WEIGHT_ACCEL doit être 1
-
 #define GPF_IMU_GYRO_FS_SEL_250    MPU6050_GYRO_FS_250
 #define GPF_IMU_GYRO_FS_SEL_500    MPU6050_GYRO_FS_500
 #define GPF_IMU_GYRO_FS_SEL_1000   MPU6050_GYRO_FS_1000
@@ -67,15 +64,12 @@
   #define GPF_IMU_ACCEL_SCALE_FACTOR 2048.0
 #endif
 
-#define GPF_MPU6050_GYRO_FS_250_SENSITIVITY     131.0 //LSB/dps
-#define GPF_MPU6050_GYRO_FS_500_SENSITIVITY      65.5 //LSB/dps
-#define GPF_MPU6050_GYRO_FS_1000_SENSITIVITY     32.8 //LSB/dps
-#define GPF_MPU6050_GYRO_FS_2000_SENSITIVITY     16.4 //LSB/dps
+#define GPF_IMU_FUSION_TYPE_MADGWICK              0
+#define GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER  1
 
-#define GPF_MPU6050_ACCEL_FS_2_SENSITIVITY    16384.0 //LSB/g
-#define GPF_MPU6050_ACCEL_FS_4_SENSITIVITY     8192.0 //LSB/g
-#define GPF_MPU6050_ACCEL_FS_8_SENSITIVITY     4096.0 //LSB/g
-#define GPF_MPU6050_ACCEL_FS_16_SENSITIVITY    2048.0 //LSB/g
+#define GPF_IMU_FUSION_TYPE_SELECTED              GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER
+
+#define GPF_IMU_FUSION_WEIGHT_GYRO_COMPLEMENTARY_FILTER  0.995 // Min 0, Max 1
 
 
 class GPF_IMU {
@@ -85,6 +79,7 @@ class GPF_IMU {
         void initialize(gpf_config_struct *);        
         bool getIMUData();
         void doFusion_madgwick6DOF();
+        void doFusion_complementaryFilter();
 
         void calibrate();
         void meansensors();

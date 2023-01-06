@@ -9,9 +9,11 @@
 #ifndef GPF_CONS_H 
 #define GPF_CONS_H
 
-#define GPF_MISC_PROG_CURRENT_VERSION    101
-#define GPF_MISC_CONFIG_CURRENT_VERSION  10
-#define GPF_MISC_NUMBER_OF_BUTTONS       20
+#define GPF_MISC_PROG_CURRENT_VERSION      101
+#define GPF_MISC_CONFIG_CURRENT_VERSION    10
+#define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_NUMERO  20
+#define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_PLUS    4
+#define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_MINUS   4
 #define GPF_MISC_PIN_BUZZER              33
 
 #define GPF_MISC_FORMAT_DATE_TIME_LOGGING     0 //YYYYMMDD HHMMSS.VVV //VVV = milliseconds
@@ -78,6 +80,7 @@ typedef enum {
        GPF_MENU_TEST_MENU,
           GPF_MENU_TEST_RC,
           GPF_MENU_TEST_IMU,
+          GPF_MENU_TEST_MOTORS,
           GPF_MENU_TEST_TOUCH,
        GPF_MENU_CONFIG_MENU,
           GPF_MENU_CONFIG_CHANNELS_MENU,
@@ -139,17 +142,14 @@ typedef enum {
 #define GPF_CONTROLLER_Kp_roll_angle   0.2    //Roll P-gain - angle mode 
 #define GPF_CONTROLLER_Ki_roll_angle   0.3    //Roll I-gain - angle mode
 #define GPF_CONTROLLER_Kd_roll_angle   0.05   //Roll D-gain - angle mode (has no effect on controlANGLE2)
-//float B_loop_roll = 0.9;      //Roll damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
+
 #define GPF_CONTROLLER_Kp_pitch_angle  0.2   //Pitch P-gain - angle mode
 #define GPF_CONTROLLER_Ki_pitch_angle  0.3   //Pitch I-gain - angle mode
 #define GPF_CONTROLLER_Kd_pitch_angle  0.05  //Pitch D-gain - angle mode (has no effect on controlANGLE2)
-//float B_loop_pitch = 0.9;     //Pitch damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
 
 #define GPF_CONTROLLER_Kp_yaw  0.3           //Yaw P-gain
 #define GPF_CONTROLLER_Ki_yaw  0.05          //Yaw I-gain
 #define GPF_CONTROLLER_Kd_yaw  0.00015       //Yaw D-gain (be careful when increasing too high, motors will begin to overheat!)
-
-
 
 #define GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION 150 //us
 #define GPF_RC_CHANNEL_ENABLED_VALUE           1750 //us //Pour le moment, tous les sticks (Arm et BlackBox) utilisent cette valeur
@@ -181,5 +181,12 @@ typedef enum {
 #define GPF_MOTOR_FRONT_RIGHT GPF_MOTOR_2
 #define GPF_MOTOR_BACK_LEFT   GPF_MOTOR_3
 #define GPF_MOTOR_FRONT_LEFT  GPF_MOTOR_4
+
+#define GPF_DSHOT_CMD_MOTOR_STOP   0
+
+#define GPF_DSHOT_THROTTLE_MINIMUM 48
+#define GPF_DSHOT_THROTTLE_MAXIMUM 2047
+
+#define GPF_DSHOT_RESOLUTION       (GPF_DSHOT_THROTTLE_MAXIMUM - GPF_DSHOT_THROTTLE_MINIMUM + 1)
 
 #endif

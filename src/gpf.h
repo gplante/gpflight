@@ -33,7 +33,6 @@ class GPF {
         GPF();
         void initialize(gpf_config_struct *);
         void iAmStartingLoopNow(bool);
-        //unsigned long getElapsedLoopTime();
         void resetLoopStats();
         void waitUntilNextLoop();
         void toggMainBoardLed();
@@ -42,6 +41,7 @@ class GPF {
         void manageAlarms();
         void getDesiredState();   
         void controlANGLE();
+        void controlComplementaryFilter();
         void controlMixer();
         void scaleCommands();
         
@@ -59,7 +59,9 @@ class GPF {
         void menu_display_button_BackSpace();
         void menu_display_button_Start();
         void menu_display_button_Reset();
-        void menu_display_button_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+        void menu_display_button_Numero_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+        void menu_display_button_Plus_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+        void menu_display_button_Minus_n(uint8_t buttonNumber, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 
         void menu_gotoTestTouchScreen(bool, int, int);        
         void menu_gotoInfoStats(bool, int, int);
@@ -69,6 +71,7 @@ class GPF {
         void menu_gotoConfigurationPID(bool, int, int);
         void menu_gotoCalibrationIMU(bool, int, int);
         void menu_gotoDisplayAllPIDs(bool, int, int);
+        void menu_gotoTestMotors(bool, int, int);
         
         //GPF_MPU6050  myImu;
         GPF_IMU      myImu;
@@ -88,14 +91,15 @@ class GPF {
         Adafruit_GFX_Button_2 button_BackSpace;
         Adafruit_GFX_Button_2 button_Start;
         Adafruit_GFX_Button_2 button_Reset;
-        Adafruit_GFX_Button_2 buttons[GPF_MISC_NUMBER_OF_BUTTONS];
+        Adafruit_GFX_Button_2 buttons[GPF_MISC_NUMBER_OF_BUTTONS_TYPE_NUMERO];
+        Adafruit_GFX_Button_2 buttons_Plus[GPF_MISC_NUMBER_OF_BUTTONS_TYPE_PLUS];
+        Adafruit_GFX_Button_2 buttons_Minus[GPF_MISC_NUMBER_OF_BUTTONS_TYPE_MINUS];
         elapsedMillis black_box_sinceLog    = 0;
 
         char     dateTimeString[25] = ""; //Augmenter au besoin si on ajoute des choses dans la fonction ci-dessous.
         char*    get_dateTimeString(uint8_t format, bool addSpace);
 
         bool          alarmVoltageLow = false;  
-        bool          alarmImuProblem = false;  
 
         //Normalized desired state:
         float desired_state_throttle, desired_state_roll, desired_state_pitch, desired_state_yaw;
@@ -142,6 +146,7 @@ class GPF {
                  { GPF_MENU_TEST_MENU, GPF_MENU_MAIN_MENU, "Tests",NULL},
                     { GPF_MENU_TEST_RC, GPF_MENU_TEST_MENU, "Test RC",&GPF::menu_gotoTestRC},
                     { GPF_MENU_TEST_IMU, GPF_MENU_TEST_MENU, "Test IMU",&GPF::menu_gotoTestImu},
+                    { GPF_MENU_TEST_MOTORS, GPF_MENU_TEST_MENU, "Test Moteurs",&GPF::menu_gotoTestMotors},
                     { GPF_MENU_TEST_TOUCH, GPF_MENU_TEST_MENU, "Test Touch Screen",&GPF::menu_gotoTestTouchScreen},
                  { GPF_MENU_CONFIG_MENU, GPF_MENU_MAIN_MENU, "Configuration",NULL},
                     { GPF_MENU_CONFIG_CHANNELS_MENU, GPF_MENU_CONFIG_MENU, "Channels",NULL},

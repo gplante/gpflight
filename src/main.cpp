@@ -146,28 +146,31 @@ void loop() {
     myFc.iAmStartingLoopNow(true);
     myFc.debugDisplayLoopStats();
     myFc.myRc.readRx(); //Armé ou non, on va toujours lire la position des sticks
-    //Todo - Ajuste les variables selon la position des switchs
+    //Todo - Ajuste les variables selon la position des switchs genre armé, mode de vol, etc.
 
-    myFc.set_arm_IsArmed(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_ARM));
+    myFc.set_arm_IsArmed(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_ARM)); //Dans certains cas, on ne permet pas d'armer
     myFc.set_black_box_IsEnabled(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_BLACK_BOX));
 
-/*
-    if (!myFc.myImu.readSensorsAndDoCalculations()) { //Armé ou non, on va toujours lire le IMU
-    }
-*/    
-
     if (myFc.myImu.getIMUData()) { //Armé ou non, on va toujours lire le IMU
-     myFc.myImu.doFusion_madgwick6DOF();
+     if (GPF_IMU_FUSION_TYPE_SELECTED == GPF_IMU_FUSION_TYPE_MADGWICK) {
+      myFc.myImu.doFusion_madgwick6DOF();
+     }
+     if (GPF_IMU_FUSION_TYPE_SELECTED == GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER) {
+      myFc.myImu.doFusion_complementaryFilter();
+     }
     }
 
-    myFc.manageAlarms();
-    myFc.set_arm_IsArmed(false); //test remporaire
+    myFc.getDesiredState(); //Compute desired state //Convert raw commands to normalized values based on saturated control limits
+    myFc.controlANGLE();    //PID Controller //Stabilize on angle setpoint
+    myFc.controlMixer();    //Actuator mixing and scaling to PWM values //Mixes PID outputs to scaled actuator commands -- custom mixing assignments done here
+
+    //myFc.set_arm_IsArmed(true); //test remporaire
 
     if (myFc.get_arm_IsArmed()) {
       // Si armé, on ne va pas dans le menu et on n'affiche rien sur le display non plus. (C'est beaucoup trop long afficher de toute facon)
       // On se contente de ne pas ralentir la loop pour faire voler le drone :-)
       
-      if (!isArmed_previous) { 
+      if (!isArmed_previous) {
         //On était pas armé le tour d'avant donc on pourrait faire un traitement spécial vue qu'on vient tout juste d'armer        
         myFc.displayArmed();
 
@@ -180,16 +183,36 @@ void loop() {
 
         isArmed_previous = true;
       }
-      
-      
+            
+      myFc.scaleCommands();   //Scales motor commands to DSHOT commands
+
+      //Sécurité - Fail Safe
+      if (myFc.myRc.get_isInFailSafe()) { //A penser
+       for (uint8_t motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) { 
+        myFc.motor_command_DSHOT[motorNumber] = GPF_DSHOT_CMD_MOTOR_STOP; 
+       }
+      }
+
+      // On envoi les commandes aux ESC seulement lorsqu'on est armé.
+      // Lorsque la commande des moteurs ne change pas, ca ne donnerait normalement rien de réenvoyer la commande continuellement 
+      // puisque en réalité ce n'est pas la fonction sendCommand() qui envoi le signal aux ESC mais plutôt les DMA. 
+      // Mais j'appel cette fonction continuellement quand-même car c'est plus simple comme celà.
+      for (uint8_t motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) { 
+       myFc.myDshot.sendCommand(motorNumber, myFc.motor_command_DSHOT[motorNumber], false);
+      }
 
     } else {
-      //Si pas armé, et bien on affiche le menu et on peut faire la gestion des paramètres
+      //Si pas armé, et bien on affiche le menu sur l'écran tactile.
       
-      //if ((isArmed_previous) || (myFc.menu_current != myFc.menu_previous)) {
       if (isArmed_previous) {
         //On était armé le tour d'avant ou qu'on revient d'un autre menu donc on pourrait faire un traitement spécial vu qu'on vient tout juste de désarmer
         isArmed_previous = false;
+
+        //On est jamais trop prudent.
+        for (uint8_t motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) { 
+          myFc.motor_command_DSHOT[motorNumber] = GPF_DSHOT_CMD_MOTOR_STOP; 
+          myFc.myDshot.sendCommand(motorNumber, myFc.motor_command_DSHOT[motorNumber], false);
+        }
 
         if (myFc.get_black_box_IsEnabled()) {
          //myFc.mySdCard.closeFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
@@ -200,45 +223,9 @@ void loop() {
 
       myFc.displayAndProcessMenu();
 
-      if (sinceChange > 1000) { //Just change the dshot signal each second to see the signal changing on my scope.
-       if (lastDshotCommandSent == 0) {
-         //lastDshotCommandSent = 2047; //Command 2047 = Motor 100% Throttle
-         //lastDshotCommandSent = 68; // ((68-48) / 2000) * 100 = 1% Throttle
-         lastDshotCommandSent = 88; // ((88-48) / 2000) * 100 = 2% Throttle
-       } else {
-         lastDshotCommandSent = DSHOT_CMD_MOTOR_STOP; //Command 0 = Motor stop
-       }
-
-       for ( size_t motorNumero = 0; motorNumero < GPF_MOTOR_ITEM_COUNT; motorNumero++ ) {
-        myFc.myDshot.sendCommand(motorNumero, lastDshotCommandSent, false);
-       }
-       sinceChange = 0;
-      }
-
-      
     }
 
-    //myFc.toggMainBoardLed();
-
-    //Test
-    
-    //if (myFc.get_black_box_IsEnabled()) {
-      
-     /*
-     
-     myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));
-     myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(micros());
-     myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->println(" abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789");
-
-     if ((GPF_BLACK_BOX_RATE == 0) || (myFc.black_box_sinceLog >= GPF_BLACK_BOX_RATE)) {
-        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->flush(); 
-        myFc.black_box_sinceLog = 0;
-     }
-     */
-     
-    //}
-    
-    
+    myFc.manageAlarms();    
 }
 
 
