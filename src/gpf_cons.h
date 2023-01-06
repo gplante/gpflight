@@ -151,8 +151,18 @@ typedef enum {
 #define GPF_CONTROLLER_Ki_yaw  0.05          //Yaw I-gain
 #define GPF_CONTROLLER_Kd_yaw  0.00015       //Yaw D-gain (be careful when increasing too high, motors will begin to overheat!)
 
-#define GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION 150 //us
-#define GPF_RC_CHANNEL_ENABLED_VALUE           1750 //us //Pour le moment, tous les sticks (Arm et BlackBox) utilisent cette valeur
+#define GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION 50 //us
+
+#define GPF_RC_CHANNEL_POSITION_VALUE_LOW      1250 //us
+#define GPF_RC_CHANNEL_POSITION_VALUE_MID      1500 //us
+#define GPF_RC_CHANNEL_POSITION_VALUE_HIGH     1750 //us
+
+typedef enum { 
+    GPF_RC_CHANNEL_POSITION_LOW  = 1250,
+    GPF_RC_CHANNEL_POSITION_MID  = 1500,
+    GPF_RC_CHANNEL_POSITION_HIGH = 1750,
+
+} gpf_rc_channel_position_type_enum;
 
 #define GPF_MAIN_LOOP_RATE             500 //1000 //500 //us (250=4000hz, 500=2000hz, 1000=1000hz, 2000=500hz, ...) //Maximum atteignable d'environ 6000hz avec un Teensy 4.1
 #define GPF_MAIN_LED_TOGGLE_DURATION   500 //ms

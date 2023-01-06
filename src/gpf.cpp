@@ -105,6 +105,12 @@ void GPF::debugDisplayLoopStats() {
    DEBUG_GPF_PRINT(loopBusyTimeMax);
    DEBUG_GPF_PRINT(" loopTimeOverFlowCount=");
    DEBUG_GPF_PRINT(loopTimeOverFlowCount);
+   DEBUG_GPF_PRINT(" Armed=");
+   DEBUG_GPF_PRINT(get_arm_IsArmed());
+   DEBUG_GPF_PRINT(" get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)=");
+   DEBUG_GPF_PRINT(get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
+   
+   
 
    DEBUG_GPF_PRINTLN();
 
@@ -152,8 +158,9 @@ void GPF::genDummyTelemetryData() {
   gpf_telemetry_info.battery_remaining_percent = 63;
   gpf_telemetry_info.vario_vertival_speed = 5432; //-30000;
 
-  gpf_telemetry_info.gps_latitude    =  466589756; //466589756=46.6589756 = 46 deg 39 min...
-  gpf_telemetry_info.gps_longitude   = -713100184; // -713100184=-71.3100184 = -71 deg 18 min...
+  gpf_telemetry_info.gps_latitude    =  466714329; //466714329=46.671432941367534 = 46° 40' 17.1588"
+  gpf_telemetry_info.gps_longitude   = -713092017; // -713092017=-71.30920173979146 = -71° 18' 33.1266"
+
   gpf_telemetry_info.gps_groundspeed = 123; //123=12.3kh
   gpf_telemetry_info.gps_heading     = 16500; //16500=16.50, 31400=31.40, 32000=32, 0=0, 18000=18, 1800=1.80, ??? Pas plus que 32 degreés ???
   gpf_telemetry_info.gps_altitude    = 500;
@@ -251,13 +258,13 @@ void GPF::menu_gotoTestTouchScreen(bool firstTime, int not_used_param_2=0, int n
   
 }
 
-bool GPF::get_IsStickInPositionEnabled(uint8_t stick) {    
+bool GPF::get_IsStickInPosition(uint8_t stick, gpf_rc_channel_position_type_enum channel_position_required) {    
   bool retour = false;
-  unsigned int pos;
+  unsigned int currentPos;
 
   if (myConfig_ptr != NULL) {
-    pos    = myRc.getPwmChannelPos(myConfig_ptr->channelMaps[stick]);
-    retour = gpf_util_isPwmChannelAtPos(pos, GPF_RC_CHANNEL_ENABLED_VALUE);
+    currentPos    = myRc.getPwmChannelPos(myConfig_ptr->channelMaps[stick]);
+    retour = gpf_util_isPwmChannelAtPos(currentPos, channel_position_required);
   }
   
   return retour;
@@ -301,6 +308,7 @@ void GPF::menu_gotoInfoStats(bool firstTime, int not_used_param_2=0, int not_use
   const uint16_t x_pos = 120;
   static elapsedMillis sincePrint = 1001; //pour que le tout s'affiche tout de suite dès le premier appel de la fonction.
   const uint16_t sincePrint_delay = 1000;
+  myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
   if (firstTime) {    
     myDisplay.clearScreen();
@@ -308,7 +316,7 @@ void GPF::menu_gotoInfoStats(bool firstTime, int not_used_param_2=0, int not_use
     menu_display_button_Save("Reset Sta");
 
     myDisplay.setTextSize(2);
-    myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+    //myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
     myDisplay.get_tft()->setCursor(0,0);  
     myDisplay.println("**** Main Loop ****");
@@ -344,7 +352,7 @@ void GPF::menu_gotoInfoStats(bool firstTime, int not_used_param_2=0, int not_use
   if (sincePrint > sincePrint_delay) {
     sincePrint = 0;
     myDisplay.setTextSize(2);
-    myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+    //myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
     myDisplay.get_tft()->setCursor(0,0);  
     myDisplay.println();
@@ -427,13 +435,13 @@ void GPF::menu_gotoTestRC(bool firstTime, int not_used_param_2=0, int not_used_p
   uint16_t charHeight = 0;
   uint16_t charWidth  = 0;
 
+  myDisplay.setTextSize(2);
+  myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+
   if (firstTime) {
     myDisplay.clearScreen();
     menu_display_button_Exit();
   }
-
-  myDisplay.setTextSize(2);
-  myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
   for (size_t channel = 1; channel <= GPF_RC_NUMBER_CHANNELS; channel++) {     
    myDisplay.get_tft()->fillRect(0, (channel -1) * charHeight, myDisplay.getDisplayWidth(), charHeight, ILI9341_BLACK);
@@ -589,7 +597,7 @@ void GPF::displayAndProcessMenu() {
   
   // Quand on consulte/modifi la config via l'écran tactile, par sécurité (car on a le visage proche des hélices) on ne permet pas 
   // d'armer les moteurs sauf si on est au menu principal et que la switch Arm est présentement à l'état Désarmé.
-  arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) && (!get_IsStickInPositionEnabled(GPF_RC_STICK_ARM));
+  arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) && (!get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
   
   if (menu_pleaseRefresh) {
    DEBUG_GPF_PRINT(F("menu_current=")); 
@@ -1031,15 +1039,14 @@ void GPF::menu_gotoCalibrationIMU(bool firstTime, int not_used_param_2=0, int no
   uint16_t charHeight = 0;
   uint16_t charWidth  = 0;
 
+  myDisplay.setTextSize(2);
+  myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+
   if (firstTime) {
     myDisplay.clearScreen();
     menu_display_button_Start();
     menu_display_button_Exit();
     menu_display_button_Reset();
-
-    myDisplay.setTextSize(2);
-    myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
-
 
     myDisplay.get_tft()->setCursor(0,0);  
     myDisplay.println("Current");
@@ -1081,7 +1088,7 @@ void GPF::menu_gotoCalibrationIMU(bool firstTime, int not_used_param_2=0, int no
    if (button_Start.contains(pixelX, pixelY)) {
     DEBUG_GPF_PRINT("On démarre la calibration");
     DEBUG_GPF_PRINTLN(__func__);
-    myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+    //myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
     myDisplay.get_tft()->setCursor(0,140);  
     myDisplay.println("Calibration en");
@@ -1155,6 +1162,7 @@ void GPF::menu_gotoCalibrationIMU(bool firstTime, int not_used_param_2=0, int no
    if (button_Reset.contains(pixelX, pixelY)) {
     DEBUG_GPF_PRINT("Reset offsets ");
     DEBUG_GPF_PRINTLN(__func__);
+    //myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
     myImu.calibration_offset_ax = 0;
     myImu.calibration_offset_ay = 0;
@@ -1217,16 +1225,15 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
   static elapsedMillis sincePrint = 251; //pour que le tout s'affiche tout de suite dès le premier appel de la fonction.
   const uint16_t sincePrint_delay = 250;
 
+  myDisplay.setTextSize(2);
+  myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+
   if (firstTime) {
     myDisplay.clearScreen();
     menu_display_button_Exit();
 
-    myDisplay.setTextSize(2);
-    myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
-
     myDisplay.get_tft()->setCursor(0,0);  
     myDisplay.println(" IMU");
-
     myDisplay.println(" ax");  
     myDisplay.println(" ay");
     myDisplay.println(" az");
@@ -1241,8 +1248,8 @@ void GPF::menu_gotoTestImu(bool firstTime, int not_used_param_2=0, int not_used_
 
   if (sincePrint > sincePrint_delay) {
     sincePrint = 0;
-    myDisplay.setTextSize(2);
-    myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
+    //myDisplay.setTextSize(2);
+    //myDisplay.get_tft()->measureChar('X',&charWidth,&charHeight); 
 
     myDisplay.get_tft()->setCursor(0,0);  
     myDisplay.println();

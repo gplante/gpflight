@@ -44,9 +44,28 @@ int gpf_util_freeRam() {
   return (char *)&_heap_end - __brkval;
 }
 
-bool gpf_util_isPwmChannelAtPos(int currentPos, int posRequired) {
-  return  ( (currentPos >= (posRequired - GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION)) &&
-          (currentPos <= (posRequired + GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION)) );
+bool gpf_util_isPwmChannelAtPos(int currentPos, gpf_rc_channel_position_type_enum channel_position_required) {
+  bool retour = false;
+
+  switch (channel_position_required) {
+  case GPF_RC_CHANNEL_POSITION_LOW:
+    retour = (currentPos < (channel_position_required - GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION));
+    break;
+
+  case GPF_RC_CHANNEL_POSITION_MID:
+    retour = (
+              ((channel_position_required + GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION) > currentPos) &&
+              ((channel_position_required - GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION) < currentPos)
+             );
+    break;  
+
+  case GPF_RC_CHANNEL_POSITION_HIGH:
+    retour = (currentPos > (channel_position_required + GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION));
+    break;
+
+  }
+
+  return  retour;
 }
 
 void  gpf_util_resetConfigToDefault(gpf_config_struct *ptr) {

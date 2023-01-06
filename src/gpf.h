@@ -45,7 +45,7 @@ class GPF {
         void controlMixer();
         void scaleCommands();
         
-        bool get_IsStickInPositionEnabled(uint8_t stick);
+        bool get_IsStickInPosition(uint8_t stick, gpf_rc_channel_position_type_enum channel_position_required);
         bool get_arm_IsArmed();
         bool set_arm_IsArmed(bool);
         bool get_black_box_IsEnabled();

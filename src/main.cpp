@@ -39,11 +39,9 @@ gpf_config_struct myConfig;
 
 GPF          myFc; //My Flight Controller GPFlight
 
-elapsedMillis sinceDummy;   
-
-
 void setup() {
-
+  elapsedMillis sinceDummy;
+  
   pinMode(LED_BUILTIN, OUTPUT); // initialize LED digital pin as an output. // Attention, la LED_BUILTIN (pin 13) est la même pin que le SPI SCK sur un Teensy 4.1
   pinMode(GPF_MISC_PIN_BUZZER, OUTPUT); // buzzer/piezo
 
@@ -92,49 +90,12 @@ void setup() {
   //Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
   
   myFc.initialize(&myConfig);
-  myFc.genDummyTelemetryData();
+  myFc.genDummyTelemetryData(); //Pour fin de tests
   
-    /*
-    Serial.print("getFullScaleAccelRange A:");
-    Serial.println(accelgyro.getFullScaleAccelRange()); // 0 = +/- 2g, 1 = +/- 4g, 2 = +/- 8g, 3 = +/- 16g
-    accelgyro.setFullScaleAccelRange(1);
-    Serial.print("getFullScaleAccelRange B:");
-    Serial.println(accelgyro.getFullScaleAccelRange());
-
-    Serial.print("getFullScaleGyroRange:");
-    Serial.println(accelgyro.getFullScaleGyroRange()); // 0 = +/- 250 degrees/sec, 1 = +/- 500 degrees/sec, 2 = +/- 1000 degrees/sec, 3 = +/- 2000 degrees/sec
-    accelgyro.setFullScaleGyroRange(2); //Changer valeur de GPF_IMU_GYR_LSB_SENSITIVITY si changement ici
-    Serial.print("getFullScaleGyroRange:");
-    Serial.println(accelgyro.getFullScaleGyroRange()); 
-
-    Serial.print("getDHPFMode():");
-    Serial.print(accelgyro.getDHPFMode());
-    Serial.println("");
-    */
-
-/*
-    while (true) {
-
-     for (int i = 0; i < 10; i++) {
-      Serial.print(myFc.myImu.convert_0_360_to_90_90(myFc.myImu.convert_90_90_to_0_360(89.6,0.5)),4); Serial.print(", "); //x
-      Serial.print(myFc.myImu.convert_0_360_to_90_90(myFc.myImu.convert_90_90_to_0_360(-0.6,0.5)),4); Serial.print(", "); //y
-      Serial.println("");
-      delay(200);    
-     }
-
-     for (int i = 0; i < 10; i++) {
-      Serial.print(myFc.myImu.convert_0_360_to_90_90(myFc.myImu.convert_90_90_to_0_360(89.6,-0.5)),4); Serial.print(", "); //x
-      Serial.print(myFc.myImu.convert_0_360_to_90_90(myFc.myImu.convert_90_90_to_0_360(-0.6,-0.5)),4); Serial.print(", "); //y
-      Serial.println("");
-      delay(200);
-     }
-        
-    }
-*/  
-   //myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
-   DEBUG_GPF_PRINTLN("*******************************************");    
-   DEBUG_GPF_PRINTLN(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));    
-   DEBUG_GPF_PRINTLN(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1,true));    
+  //myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
+  DEBUG_GPF_PRINTLN("*******************************************");    
+  DEBUG_GPF_PRINTLN(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));    
+  DEBUG_GPF_PRINTLN(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1,true));    
 }
 
 elapsedMillis sinceChange;
@@ -146,18 +107,17 @@ void loop() {
     myFc.iAmStartingLoopNow(true);
     myFc.debugDisplayLoopStats();
     myFc.myRc.readRx(); //Armé ou non, on va toujours lire la position des sticks
-    //Todo - Ajuste les variables selon la position des switchs genre armé, mode de vol, etc.
+    myFc.set_arm_IsArmed(myFc.get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)); //Dans certains cas, on ne permet pas d'armer
+    myFc.set_black_box_IsEnabled(myFc.get_IsStickInPosition(GPF_RC_STICK_BLACK_BOX, GPF_RC_CHANNEL_POSITION_HIGH));
 
-    myFc.set_arm_IsArmed(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_ARM)); //Dans certains cas, on ne permet pas d'armer
-    myFc.set_black_box_IsEnabled(myFc.get_IsStickInPositionEnabled(GPF_RC_STICK_BLACK_BOX));
+    if (myFc.get_IsStickInPosition(GPF_RC_STICK_FLIGHT_MODE, GPF_RC_CHANNEL_POSITION_HIGH)) {
+     myFc.myImu.fusion_type = GPF_IMU_FUSION_TYPE_MADGWICK;
+    } else {
+     myFc.myImu.fusion_type = GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER;
+    }
 
     if (myFc.myImu.getIMUData()) { //Armé ou non, on va toujours lire le IMU
-     if (GPF_IMU_FUSION_TYPE_SELECTED == GPF_IMU_FUSION_TYPE_MADGWICK) {
-      myFc.myImu.doFusion_madgwick6DOF();
-     }
-     if (GPF_IMU_FUSION_TYPE_SELECTED == GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER) {
-      myFc.myImu.doFusion_complementaryFilter();
-     }
+      myFc.myImu.doFusion(); //Madwick ou Complementary filder selon la position de la switch mode de vol.
     }
 
     myFc.getDesiredState(); //Compute desired state //Convert raw commands to normalized values based on saturated control limits
@@ -219,6 +179,7 @@ void loop() {
         }
 
         myFc.resetLoopStats();
+        myFc.menu_pleaseRefresh = true;
       }
 
       myFc.displayAndProcessMenu();

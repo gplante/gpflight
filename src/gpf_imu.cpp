@@ -113,7 +113,7 @@ bool GPF_IMU::getIMUData() {
     accY_output = accY_raw_plus_offsets / GPF_IMU_ACCEL_SCALE_FACTOR; //G's
     accZ_output = accZ_raw_plus_offsets / GPF_IMU_ACCEL_SCALE_FACTOR; //G's
   
-    if (GPF_IMU_FUSION_TYPE_SELECTED == GPF_IMU_FUSION_TYPE_MADGWICK) {
+    if (fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK) {
      //LP filter accelerometer data
      accX_output = (1.0 - B_accel)*accX_output_prev + B_accel*accX_output;
      accY_output = (1.0 - B_accel)*accY_output_prev + B_accel*accY_output;
@@ -133,7 +133,7 @@ bool GPF_IMU::getIMUData() {
     gyrY_output = gyrY_raw_plus_offsets / GPF_IMU_GYRO_SCALE_FACTOR; //deg/sec
     gyrZ_output = gyrZ_raw_plus_offsets / GPF_IMU_GYRO_SCALE_FACTOR; //deg/sec
     
-    if (GPF_IMU_FUSION_TYPE_SELECTED == GPF_IMU_FUSION_TYPE_MADGWICK) {
+    if (fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK) {
      //LP filter gyro data
      gyrX_output = (1.0 - B_gyro)*gyrX_output_prev + B_gyro*gyrX_output;
      gyrY_output = (1.0 - B_gyro)*gyrY_output_prev + B_gyro*gyrY_output;
@@ -164,6 +164,17 @@ bool GPF_IMU::getIMUData() {
     return true;
 }
 
+void GPF_IMU::doFusion() {
+  
+ if (fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK) {
+  doFusion_madgwick6DOF();
+ }
+
+ if (fusion_type == GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER) {
+  doFusion_complementaryFilter();
+ }
+
+}
 
 void GPF_IMU::doFusion_madgwick6DOF() {
   // Cette fonction, légèrement adaptée pour ce projet, provient du projet dRehmFlight VTOL Flight Controller de Nicholas Rehm à https://github.com/nickrehm/dRehmFlight

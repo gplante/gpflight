@@ -67,10 +67,7 @@
 #define GPF_IMU_FUSION_TYPE_MADGWICK              0
 #define GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER  1
 
-#define GPF_IMU_FUSION_TYPE_SELECTED              GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER
-
 #define GPF_IMU_FUSION_WEIGHT_GYRO_COMPLEMENTARY_FILTER  0.995 // Min 0, Max 1
-
 
 class GPF_IMU {
     public:
@@ -78,12 +75,14 @@ class GPF_IMU {
 
         void initialize(gpf_config_struct *);        
         bool getIMUData();
+        void doFusion();
         void doFusion_madgwick6DOF();
         void doFusion_complementaryFilter();
 
         void calibrate();
         void meansensors();
 
+        uint8_t fusion_type = GPF_IMU_FUSION_TYPE_MADGWICK;
         int16_t calibration_offset_ax, calibration_offset_ay, calibration_offset_az, calibration_offset_gx, calibration_offset_gy, calibration_offset_gz;
         int16_t accX_raw_no_offsets,   accY_raw_no_offsets,   accZ_raw_no_offsets,   gyrX_raw_no_offsets,   gyrY_raw_no_offsets,   gyrZ_raw_no_offsets;
         int16_t accX_raw_plus_offsets, accY_raw_plus_offsets, accZ_raw_plus_offsets, gyrX_raw_plus_offsets, gyrY_raw_plus_offsets, gyrZ_raw_plus_offsets;
@@ -91,6 +90,7 @@ class GPF_IMU {
 
         float accX_output,      accY_output,      accZ_output;
         float gyrX_output,      gyrY_output,      gyrZ_output;
+
         
         unsigned long errorCount = 0;
     private:
@@ -100,8 +100,6 @@ class GPF_IMU {
 
         uint8_t buffer[14];
         elapsedMillis debug_sincePrint;
-
-        
 
         float accX_output_prev, accY_output_prev, accZ_output_prev;        
         float gyrX_output_prev, gyrY_output_prev, gyrZ_output_prev;
