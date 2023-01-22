@@ -44,7 +44,7 @@ void setup() {
   
   pinMode(LED_BUILTIN, OUTPUT); // initialize LED digital pin as an output. // Attention, la LED_BUILTIN (pin 13) est la même pin que le SPI SCK sur un Teensy 4.1
   pinMode(GPF_MISC_PIN_BUZZER, OUTPUT); // buzzer/piezo
-
+  
   gpf_util_blinkMainBoardLed(3);
   Serial.begin(115200);  //Port USB //C'est long genre 2 secondes ???
   sinceDummy = 0;
@@ -86,7 +86,7 @@ void setup() {
   // Fin Date/Heure
 
   Wire.begin();           //La librairie I2Cdev en a besoin
-  Wire.setClock(1000000); //Note this is 2.5 times the spec sheet 400 kHz max...
+  //Wire.setClock(1000000); //Note this is 2.5 times the spec sheet 400 kHz max...
   //Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
   
   myFc.initialize(&myConfig);
@@ -102,11 +102,20 @@ elapsedMillis sinceChange;
 uint16_t      lastDshotCommandSent = 0;
 
 void loop() {
-    static bool isArmed_previous = true;
+    static bool          isArmed_previous              = true;
+    static bool          isInFailSafe                  = false;   
+    static bool          isInFailSafe_previous         = false;   
+    static unsigned long failSafeMotorDecelarationLoopCount = 0;
+    static float         failSafeMotorDecelarationStep = 0.0;
+    static int           failSafePwmThrottleValue = 0;
+    static unsigned long dummyCpt = 0;
+
+    dummyCpt++;
 
     myFc.iAmStartingLoopNow(true);
     myFc.debugDisplayLoopStats();
     myFc.myRc.readRx(); //Armé ou non, on va toujours lire la position des sticks
+
     myFc.set_arm_IsArmed(myFc.get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)); //Dans certains cas, on ne permet pas d'armer
     myFc.set_black_box_IsEnabled(myFc.get_IsStickInPosition(GPF_RC_STICK_BLACK_BOX, GPF_RC_CHANNEL_POSITION_HIGH));
 
@@ -147,10 +156,51 @@ void loop() {
       myFc.scaleCommands();   //Scales motor commands to DSHOT commands
 
       //Sécurité - Fail Safe
-      if (myFc.myRc.get_isInFailSafe()) { //A penser
-       for (uint8_t motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) { 
-        myFc.motor_command_DSHOT[motorNumber] = GPF_DSHOT_CMD_MOTOR_STOP; 
+      isInFailSafe_previous = isInFailSafe;
+      isInFailSafe = myFc.myRc.get_isInFailSafe();
+
+      if (isInFailSafe) {
+       //if ((dummyCpt % 250) == 0) {
+       // DEBUG_GPF_PRINTLN("isInFailSafe=oui"); 
+       //}
+
+       // Lorsqu'on entre en failSafe, on remet tous les channels à 1500 (sauf le throttle) pour laisser le drone se 
+       // stabiliser. Cependant pendant 5 secondes, je force le throttle à diminuer jusqu'à 0.
+       // Todo: Ajouter condition avec lidar si distance avec le sol est plus petite que 0.5 mètre environ.
+ 
+       if (!isInFailSafe_previous) { //On entre en failSafe 
+         failSafeMotorDecelarationLoopCount = 0;
+
+         //Faudrait peut-être pas mettre tous les channels à 1500 genre Throttle, ARM et mode de vol, etc...
+         //Faudrait plutot forcer que le yaw, roll et pitch
+         myFc.myRc.forcePwmChannelYawRollPitchToNeutral(myConfig.channelMaps[GPF_RC_STICK_YAW],myConfig.channelMaps[GPF_RC_STICK_ROLL],myConfig.channelMaps[GPF_RC_STICK_PITCH]); 
+         failSafePwmThrottleValue       = myFc.myRc.getPwmChannelValue(myConfig.channelMaps[GPF_RC_STICK_THROTTLE]); 
+         failSafeMotorDecelarationStep  = max(0.0,failSafePwmThrottleValue - GPF_RC_CHANNEL_VALUE_MIN) / (GPF_FAILSAFE_MOTORS_DECELERATION_DURATION / GPF_MAIN_LOOP_RATE);
+       
+         DEBUG_GPF_PRINTLN("*****On entre en failSafe ******************************************************** ");
+         DEBUG_GPF_PRINT("***** failSafeMotorDecelarationStep=");
+         DEBUG_GPF_PRINTLN(failSafeMotorDecelarationStep);       
+       }     
+
+       if (myFc.myRc.getFailSafeDuration() < GPF_FAILSAFE_MOTORS_DECELERATION_DURATION) { //Pendant 5 secondes, on rallenti les moteurs jusqu'à 0.
+        myFc.myRc.setPwmChannelValue(myConfig.channelMaps[GPF_RC_STICK_THROTTLE],failSafePwmThrottleValue - (failSafeMotorDecelarationLoopCount * failSafeMotorDecelarationStep));
+
+        if ((dummyCpt % 250) == 0) {
+          DEBUG_GPF_PRINT("GPF_RC_STICK_THROTTLE=");
+          DEBUG_GPF_PRINT(myFc.myRc.getPwmChannelValue(myConfig.channelMaps[GPF_RC_STICK_THROTTLE]));
+        
+          DEBUG_GPF_PRINT(" (f..Count * f..Step)=");
+          DEBUG_GPF_PRINTLN((failSafeMotorDecelarationLoopCount * failSafeMotorDecelarationStep));
+        }
+       } else {
+         // Une fois qu'on a laissé le temps aux moteurs de ralentir pendant 5 secondes pour que le drone descendre/tombe en douceur,
+         // après ce délai on s'assure que les moteurs arrêtent complètement.
+         for (uint8_t motorNumber = 0; motorNumber < GPF_MOTOR_ITEM_COUNT; motorNumber++) { 
+          myFc.motor_command_DSHOT[motorNumber] = GPF_DSHOT_CMD_MOTOR_STOP; 
+         }
        }
+
+       failSafeMotorDecelarationLoopCount++;
       }
 
       // On envoi les commandes aux ESC seulement lorsqu'on est armé.

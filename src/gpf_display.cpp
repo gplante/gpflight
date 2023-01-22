@@ -25,6 +25,14 @@ GPF_DISPLAY::GPF_DISPLAY() {
 }
 
 void GPF_DISPLAY::initialize() {    
+    // *** Finalement, cette patch ne marche pas...
+    // Patch sinon l'écran reste blanc et ne fonctionne pas
+    // Ca ne bug pas si je ne branche pas les pin du touchscreen mais j'ai besoin du touchscreen :-)
+    // https://forum.pjrc.com/threads/69740-ILI9341-White-screen-with-touch-pins-connected-Teensy-4-1-amp-audio-shield
+    pinMode(GPF_SPI_TOUCH_DC,OUTPUT); 
+    digitalWrite(GPF_SPI_TOUCH_DC,HIGH); 
+    //Fin patch
+    //delay(500);
     tft.begin();    
 
     // Note: you can now set the SPI speed to any value

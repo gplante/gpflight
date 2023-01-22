@@ -81,17 +81,17 @@ void  gpf_util_resetConfigToDefault(gpf_config_struct *ptr) {
    ptr->channelMaps[GPF_RC_STICK_FLIGHT_MODE] = GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL;   
    ptr->channelMaps[GPF_RC_STICK_BLACK_BOX]   = GPF_RC_STICK_BLACK_BOX_DEFAULT_CHANNEL;   
 
-   ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_PROPORTIONAL]   = 1;
-   ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_INTEGRAL]       = 1;
-   ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_DERIVATIVE]     = 1;
+   ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_PROPORTIONAL]   = 0.2     * GPF_PID_STORAGE_MULTIPLIER; //0.2  //Roll P-gain - angle mode 
+   ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_INTEGRAL]       = 0.3     * GPF_PID_STORAGE_MULTIPLIER; //0.3  //Roll I-gain - angle mode 
+   ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_DERIVATIVE]     = 0.05    * GPF_PID_STORAGE_MULTIPLIER; //0.05 //Roll D-gain - angle mode (has no effect on controlANGLE2)
 
-   ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_PROPORTIONAL]  = 1;
-   ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_INTEGRAL]      = 1;
-   ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_DERIVATIVE]    = 1;
+   ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_PROPORTIONAL]  = 0.2     * GPF_PID_STORAGE_MULTIPLIER; //0.2  //Pitch P-gain - angle mode
+   ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_INTEGRAL]      = 0.3     * GPF_PID_STORAGE_MULTIPLIER; //0.3  //Pitch I-gain - angle mode
+   ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_DERIVATIVE]    = 0.05    * GPF_PID_STORAGE_MULTIPLIER; //0.05 //Pitch D-gain - angle mode (has no effect on controlANGLE2)
 
-   ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_PROPORTIONAL]    = 1;
-   ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_INTEGRAL]        = 1;
-   ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_DERIVATIVE]      = 1;
+   ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_PROPORTIONAL]    = 0.3     * GPF_PID_STORAGE_MULTIPLIER; //0.3     //Yaw P-gain
+   ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_INTEGRAL]        = 0.05    * GPF_PID_STORAGE_MULTIPLIER; //0.05    //Yaw I-gain
+   ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_DERIVATIVE]      = 0.00015 * GPF_PID_STORAGE_MULTIPLIER; //0.00015 //Yaw D-gain (be careful when increasing too high, motors will begin to overheat!)
 
    ptr->imuOffsets[GPF_IMU_SENSOR_ACCELEROMETER][GPF_IMU_AXE_X]  = 0;
    ptr->imuOffsets[GPF_IMU_SENSOR_ACCELEROMETER][GPF_IMU_AXE_Y]  = 0;

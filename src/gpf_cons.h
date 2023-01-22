@@ -10,7 +10,7 @@
 #define GPF_CONS_H
 
 #define GPF_MISC_PROG_CURRENT_VERSION      101
-#define GPF_MISC_CONFIG_CURRENT_VERSION    10
+#define GPF_MISC_CONFIG_CURRENT_VERSION    14
 #define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_NUMERO  20
 #define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_PLUS    4
 #define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_MINUS   4
@@ -45,6 +45,8 @@ typedef enum { // *** Ne pas changer l'ordre car sert aussi pour enregistrer con
 #define GPF_IMU_ACC_AXE_Y_ROLL    GPF_AXE_ROLL
 #define GPF_IMU_ACC_AXE_X_PITCH   GPF_AXE_PITCH
 #define GPF_IMU_ACC_AXE_Z_YAW     GPF_AXE_YAW
+
+#define GPF_PID_STORAGE_MULTIPLIER 100000.0
 
 typedef enum { // *** Ne pas changer l'ordre car sert aussi pour enregistrer config dans eeprom ***
     GPF_PID_TERM_PROPORTIONAL,    
@@ -123,13 +125,16 @@ typedef enum {
 #define GPF_RC_STICK_PITCH_DEFAULT_CHANNEL       2
 #define GPF_RC_STICK_THROTTLE_DEFAULT_CHANNEL    3
 #define GPF_RC_STICK_YAW_DEFAULT_CHANNEL         4
-#define GPF_RC_STICK_ARM_DEFAULT_CHANNEL         5
-#define GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL 6
+#define GPF_RC_STICK_ARM_DEFAULT_CHANNEL         7
+#define GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL 5
 #define GPF_RC_STICK_BLACK_BOX_DEFAULT_CHANNEL   7
 
 #define GPF_RC_CHANNEL_VALUE_MIN 1000.0 //us
 #define GPF_RC_CHANNEL_VALUE_MID 1500.0 //us
 #define GPF_RC_CHANNEL_VALUE_MAX 2000.0 //us
+
+#define GPF_RC_CHANNEL_VALUE_FAILSAFE 1500.0 //us
+#define GPF_FAILSAFE_MOTORS_DECELERATION_DURATION 5000000 //us
 
 
 //Controller parameters (take note of defaults before modifying!): 

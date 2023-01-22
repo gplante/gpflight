@@ -82,7 +82,7 @@ class GPF {
         GPF_DSHOT    myDshot;
 
         gpf_telemetry_info_s gpf_telemetry_info;
-        int16_t  menu_current  = GPF_MENU_MAIN_MENU;
+        int16_t  menu_current  = GPF_MENU_MAIN_MENU; //GPF_MENU_TEST_MOTORS; //GPF_MENU_MAIN_MENU;
         //int16_t  menu_previous = -1; //Pour forcer un affichage du menu le premier coup
         bool     menu_pleaseRefresh = true;
 

@@ -107,6 +107,8 @@ void GPF::debugDisplayLoopStats() {
    DEBUG_GPF_PRINT(loopTimeOverFlowCount);
    DEBUG_GPF_PRINT(" Armed=");
    DEBUG_GPF_PRINT(get_arm_IsArmed());
+   DEBUG_GPF_PRINT(" arm_allowArming=");
+   DEBUG_GPF_PRINT(arm_allowArming);
    DEBUG_GPF_PRINT(" get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)=");
    DEBUG_GPF_PRINT(get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
    
@@ -599,6 +601,17 @@ void GPF::displayAndProcessMenu() {
   // d'armer les moteurs sauf si on est au menu principal et que la switch Arm est présentement à l'état Désarmé.
   arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) && (!get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
   
+  /*
+  DEBUG_GPF_PRINT(" get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)=");
+  DEBUG_GPF_PRINTLN(get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
+  DEBUG_GPF_PRINT(" !get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)=");
+  DEBUG_GPF_PRINTLN(!get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
+  DEBUG_GPF_PRINT(" arm_allowArming=");
+  DEBUG_GPF_PRINTLN(arm_allowArming);
+  DEBUG_GPF_PRINT(" myRc.getPwmChannelPos(myConfig_ptr->channelMaps[GPF_RC_STICK_ARM])=");
+  DEBUG_GPF_PRINTLN(myRc.getPwmChannelPos(myConfig_ptr->channelMaps[GPF_RC_STICK_ARM]));
+  */
+
   if (menu_pleaseRefresh) {
    DEBUG_GPF_PRINT(F("menu_current=")); 
    DEBUG_GPF_PRINTLN(menu_current);
@@ -1528,7 +1541,7 @@ void GPF::manageAlarms() {
   static bool          sirenAlarmToneToggle  = false;
   //alarmVoltageLow = true; //test
 
-  if (alarmVoltageLow) {
+  if (alarmVoltageLow || myRc.get_isInFailSafe() ) {
     if (sinceChange > ALARM_TOGGLE_RURATION) {
       if (sirenAlarmToneToggle)  {
        gpf_util_beep(GPF_UTIL_BEEP_TONE_ALARM); 
@@ -1680,6 +1693,22 @@ void GPF::controlANGLE() {
    */
 
   const uint16_t THROTTLE_MINIMUM = 1060;
+
+  //todo PIDs
+  /*
+  float Kp_roll_angle  = myConfig_ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_PROPORTIONAL]  / GPF_PID_STORAGE_MULTIPLIER;
+  float Ki_roll_angle  = myConfig_ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_INTEGRAL]      / GPF_PID_STORAGE_MULTIPLIER;
+  float Kd_roll_angle  = myConfig_ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_DERIVATIVE]    / GPF_PID_STORAGE_MULTIPLIER;
+
+  float Kp_pitch_angle = myConfig_ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_PROPORTIONAL] / GPF_PID_STORAGE_MULTIPLIER;
+  float Ki_pitch_angle = myConfig_ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_INTEGRAL]     / GPF_PID_STORAGE_MULTIPLIER;
+  float Kd_pitch_angle = myConfig_ptr->pids[GPF_AXE_PITCH][GPF_PID_TERM_DERIVATIVE]   / GPF_PID_STORAGE_MULTIPLIER;
+
+  float Kp_yaw         = myConfig_ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_PROPORTIONAL]   / GPF_PID_STORAGE_MULTIPLIER;
+  float Ki_yaw         = myConfig_ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_INTEGRAL]       / GPF_PID_STORAGE_MULTIPLIER;
+  float Kd_yaw         = myConfig_ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_DERIVATIVE]     / GPF_PID_STORAGE_MULTIPLIER;
+  */
+ 
   static unsigned long micros_previous = 0;
   unsigned long current_time = micros();
   float time_elapsed = (current_time - micros_previous)/1000000.0;

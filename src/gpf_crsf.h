@@ -23,7 +23,7 @@
 
 #define GPF_CRSF_BAUDRATE	                              416666  // From TBS doc: Only non-inverted ( regular ) UART is supported in this configuration. The UART runs at 416666baud 8N1 at 3.0 to 3.3V level.
 #define GPF_CRSF_MIN_DURATION_BETWEEN_FRAME	              1000    // (us) Sert à savoir lorsqu'un nouveau frame commence. Pour le moment il y a environ 6200us entre chaque frame donc si on ne recoit rien pendant 1000us on est pratiquement certain que c'est le "silence" entre deux frames. 1000us c'est beaucup mais bon, on semble avoir du temps en masse.
-#define GPF_CRSF_DELAY_FOR_FAILSAFE       	              500000  // (us) (500000us = 500ms = 1/2 seconde) Si on ne recoit rien pendant ce délai, on entre en failsafe.
+#define GPF_CRSF_DELAY_FOR_FAILSAFE       	              1000000 //500000  // (us) (500000us = 500ms = 1/2 seconde) Si on ne recoit rien pendant ce délai, on entre en failsafe.
 #define GPF_CRSF_SYNC_BYTE                                0xC8    // Sync Byte
 #define GPF_CRSF_BYTES_RECEIVED_BUFFER_MAX_LENGTH	      64      // Each CRSF frame is not longer than 64 bytes (including the Sync and CRC bytes).
                                                                   // Broadcast Frames: <Device address or Sync Byte> <Frame length> <Type><Payload> <CRC>
@@ -149,25 +149,6 @@ class GPF_CRSF {
        unsigned int channel_16 : 11;
     };
 
-    struct pwm_channels_t {
-       unsigned int channel_1;
-       unsigned int channel_2;
-       unsigned int channel_3;
-       unsigned int channel_4;
-       unsigned int channel_5;
-       unsigned int channel_6;
-       unsigned int channel_7;
-       unsigned int channel_8;
-       unsigned int channel_9;
-       unsigned int channel_10;
-       unsigned int channel_11;
-       unsigned int channel_12;
-       unsigned int channel_13;
-       unsigned int channel_14;
-       unsigned int channel_15;
-       unsigned int channel_16;
-    };
-
     struct __attribute__ ((packed)) crsf_sensor_battery_s { //Big Endian
      uint16_t voltage; // Voltage ( mV * 100 )
      uint16_t current; // Current ( mA * 100 )
@@ -223,9 +204,13 @@ class GPF_CRSF {
         void initialize(HardwareSerial *);
         void setupTelemetry(gpf_telemetry_info_s *);
         void readRx();
-        unsigned int getPwmChannelValue(uint8_t);
-        unsigned int getPwmChannelPos(uint8_t);
-        bool         get_isInFailSafe();
+        uint16_t      getPwmChannelValue(uint8_t);
+        void          setPwmChannelValue(uint8_t channelNumber, uint16_t channelValue);
+        void          forcePwmChannelYawRollPitchToNeutral(uint8_t yawChannelNumber, uint8_t rollChannelNumber, uint8_t pitchChannelNumber);
+        unsigned int  getPwmChannelPos(uint8_t);
+        bool          get_isInFailSafe();
+        unsigned long getFailSafeDuration();
+        
 
         libCrsf_link_statistics_s link_statistics;
         gpf_telemetry_info_s *gpf_telemetry_info_ptr = NULL;
@@ -235,6 +220,7 @@ class GPF_CRSF {
         void    CRC8_createLut(uint8_t);
         uint8_t CRC8_calculate(uint8_t *, int);
         bool    parseFrame();
+        
         
         void    refreshTelemetry();
         void    sendTelemetryToTx();
@@ -255,7 +241,7 @@ class GPF_CRSF {
         elapsedMillis   debug_sincePrint;
         uint8_t         crc8_lut [256];        
         crsf_channels_t crsf_channels;
-        pwm_channels_t  pwm_channels;
+        uint16_t        pwm_channels[GPF_RC_NUMBER_CHANNELS + 1] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //L'indice 0 ne servira pas. C'est parceque je désique que l'indice corresponde au numéro de canal réel pour éviter d'éventuelles confusion.
         
         crsf_heartbeat_s                     crsf_heartbeat;
         crsf_sensor_battery_s                crsf_sensor_battery;

@@ -35,5 +35,4 @@ time_t gpf_util_getTeensy3Time();
 void   gpf_util_beep(uint16_t frequency, uint32_t duration = 0UL);
 float  gpf_util_invSqrt(float x);
 
-
 #endif

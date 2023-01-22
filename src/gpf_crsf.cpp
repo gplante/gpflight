@@ -89,6 +89,12 @@ void GPF_CRSF::initialize(HardwareSerial *p_serialPort) {
 }
 
 void GPF_CRSF::readRx() {
+   bool static firstTime = true;
+
+   if (firstTime) {
+    duration_between_frame = 0;
+    firstTime = false;
+   }
    //bool telemetryItemSent = false; //On n'envoi qu'une télémétrie entre deux frames. Pour le moment, c'est correcte, on a pas grand chose à envoyer.
 
    debug_duration_between_frame_longest = max(debug_duration_between_frame_longest, (unsigned long)duration_between_frame);
@@ -102,7 +108,7 @@ void GPF_CRSF::readRx() {
     sendTelemetryToTx();    
    }
 
-   isInFailSafe =(duration_between_frame > GPF_CRSF_DELAY_FOR_FAILSAFE);
+   isInFailSafe = (duration_between_frame > GPF_CRSF_DELAY_FOR_FAILSAFE);
 
    if (bytesReceivedCount >= GPF_CRSF_BYTES_RECEIVED_BUFFER_MAX_LENGTH) { //Protection (On ne devrait jamais entrer ici normalement)
      // Ici, si on a 64 bytes dans le bytesReceivedCount c'est que le frame n'a pas été traité. 
@@ -213,23 +219,23 @@ void GPF_CRSF::readRx() {
       DEBUG_GPF_CRSF_PRINT(F("CRSF:Channels ch1="));
       DEBUG_GPF_CRSF_PRINT(crsf_channels.channel_1);
       DEBUG_GPF_CRSF_PRINT(F(" "));
-      DEBUG_GPF_CRSF_PRINT(pwm_channels.channel_1);
+      DEBUG_GPF_CRSF_PRINT(pwm_channels[1]);
       //DEBUG_GPF_CRSF_PRINT(getPwmChannelValue(1));
 
       DEBUG_GPF_CRSF_PRINT(F(" ch2="));
       DEBUG_GPF_CRSF_PRINT(crsf_channels.channel_2);
       DEBUG_GPF_CRSF_PRINT(F(" "));
-      DEBUG_GPF_CRSF_PRINT(pwm_channels.channel_2);
+      DEBUG_GPF_CRSF_PRINT(pwm_channels[2]);
 
       DEBUG_GPF_CRSF_PRINT(F(" ch3="));
       DEBUG_GPF_CRSF_PRINT(crsf_channels.channel_3);
       DEBUG_GPF_CRSF_PRINT(F(" "));
-      DEBUG_GPF_CRSF_PRINT(pwm_channels.channel_3);
+      DEBUG_GPF_CRSF_PRINT(pwm_channels[3]);
 
       DEBUG_GPF_CRSF_PRINT(F(" ch4="));
       DEBUG_GPF_CRSF_PRINT(crsf_channels.channel_4);
       DEBUG_GPF_CRSF_PRINT(F(" "));
-      DEBUG_GPF_CRSF_PRINT(pwm_channels.channel_4);
+      DEBUG_GPF_CRSF_PRINT(pwm_channels[4]]);
 
       DEBUG_GPF_CRSF_PRINTLN();
 
@@ -286,22 +292,22 @@ bool GPF_CRSF::parseFrame() {
       memcpy(&crsf_channels, &bytesReceivedBuffer[GPF_CRSF_BYTE_POSITION_PAYLOAD], sizeof(crsf_channels_t));
 
       //CRSF a son propre format pour la valeur de chaque canal alors on converti en format pwm qui est plus universel et plus facile à travailler.
-      pwm_channels.channel_1  = CHANNEL_SCALE(crsf_channels.channel_1);
-      pwm_channels.channel_2  = CHANNEL_SCALE(crsf_channels.channel_2);
-      pwm_channels.channel_3  = CHANNEL_SCALE(crsf_channels.channel_3);
-      pwm_channels.channel_4  = CHANNEL_SCALE(crsf_channels.channel_4);
-      pwm_channels.channel_5  = CHANNEL_SCALE(crsf_channels.channel_5);
-      pwm_channels.channel_6  = CHANNEL_SCALE(crsf_channels.channel_6);
-      pwm_channels.channel_7  = CHANNEL_SCALE(crsf_channels.channel_7);
-      pwm_channels.channel_8  = CHANNEL_SCALE(crsf_channels.channel_8);
-      pwm_channels.channel_9  = CHANNEL_SCALE(crsf_channels.channel_9);
-      pwm_channels.channel_10 = CHANNEL_SCALE(crsf_channels.channel_10);
-      pwm_channels.channel_11 = CHANNEL_SCALE(crsf_channels.channel_11);
-      pwm_channels.channel_12 = CHANNEL_SCALE(crsf_channels.channel_12);
-      pwm_channels.channel_13 = CHANNEL_SCALE(crsf_channels.channel_13);
-      pwm_channels.channel_14 = CHANNEL_SCALE(crsf_channels.channel_14);
-      pwm_channels.channel_15 = CHANNEL_SCALE(crsf_channels.channel_15);
-      pwm_channels.channel_16 = CHANNEL_SCALE(crsf_channels.channel_16);
+      pwm_channels[1]  = CHANNEL_SCALE(crsf_channels.channel_1);
+      pwm_channels[2]  = CHANNEL_SCALE(crsf_channels.channel_2);
+      pwm_channels[3]  = CHANNEL_SCALE(crsf_channels.channel_3);
+      pwm_channels[4]  = CHANNEL_SCALE(crsf_channels.channel_4);
+      pwm_channels[5]  = CHANNEL_SCALE(crsf_channels.channel_5);
+      pwm_channels[6]  = CHANNEL_SCALE(crsf_channels.channel_6);
+      pwm_channels[7]  = CHANNEL_SCALE(crsf_channels.channel_7);
+      pwm_channels[8]  = CHANNEL_SCALE(crsf_channels.channel_8);
+      pwm_channels[9]  = CHANNEL_SCALE(crsf_channels.channel_9);
+      pwm_channels[10] = CHANNEL_SCALE(crsf_channels.channel_10);
+      pwm_channels[11] = CHANNEL_SCALE(crsf_channels.channel_11);
+      pwm_channels[12] = CHANNEL_SCALE(crsf_channels.channel_12);
+      pwm_channels[13] = CHANNEL_SCALE(crsf_channels.channel_13);
+      pwm_channels[14] = CHANNEL_SCALE(crsf_channels.channel_14);
+      pwm_channels[15] = CHANNEL_SCALE(crsf_channels.channel_15);
+      pwm_channels[16] = CHANNEL_SCALE(crsf_channels.channel_16);
     }
 
    }
@@ -316,8 +322,14 @@ bool GPF_CRSF::parseFrame() {
   return retour;
 }
 
+
+
 bool GPF_CRSF::get_isInFailSafe() {
   return isInFailSafe;
+}
+
+unsigned long GPF_CRSF::getFailSafeDuration() {
+  return max((unsigned long)(duration_between_frame - GPF_CRSF_DELAY_FOR_FAILSAFE),0UL);
 }
 
 uint8_t GPF_CRSF::CRC8_calculate(uint8_t * data, int len) {
@@ -339,64 +351,21 @@ void GPF_CRSF::CRC8_createLut(uint8_t poly) {
 	}
 }
 
-unsigned int GPF_CRSF::getPwmChannelValue(uint8_t channelNumber) {
-  unsigned int retour = 0;
+uint16_t GPF_CRSF::getPwmChannelValue(uint8_t channelNumber) {
+  return pwm_channels[channelNumber];
+}
 
-  switch (channelNumber) {
-  case 1:
-    retour = pwm_channels.channel_1;
-    break;
-  case 2:
-    retour = pwm_channels.channel_2;
-    break;
-  case 3:
-    retour = pwm_channels.channel_3;
-    break;
-  case 4:
-    retour = pwm_channels.channel_4;
-    break;
-  case 5:
-    retour = pwm_channels.channel_5;
-    break;
-  case 6:
-    retour = pwm_channels.channel_6;
-    break;
-  case 7:
-    retour = pwm_channels.channel_7;
-    break;
-  case 8:
-    retour = pwm_channels.channel_8;
-    break;
-  case 9:
-    retour = pwm_channels.channel_9;
-    break;
-  case 10:
-    retour = pwm_channels.channel_10;
-    break;
-  case 11:
-    retour = pwm_channels.channel_11;
-    break;
-  case 12:
-    retour = pwm_channels.channel_12;
-    break;
-  case 13:
-    retour = pwm_channels.channel_13;
-    break;
-  case 14:
-    retour = pwm_channels.channel_14;
-    break;
-  case 15:
-    retour = pwm_channels.channel_15;
-    break;
-  case 16:
-    retour = pwm_channels.channel_16;
-    break;                              
-  
-  default:
-    break;
-  }
+void GPF_CRSF::setPwmChannelValue(uint8_t channelNumber, uint16_t channelValue) {
 
-  return retour;
+  pwm_channels[channelNumber] = channelValue;
+
+}
+
+void GPF_CRSF::forcePwmChannelYawRollPitchToNeutral(uint8_t yawChannelNumber, uint8_t rollChannelNumber, uint8_t pitchChannelNumber) {
+
+      pwm_channels[yawChannelNumber]   = GPF_RC_CHANNEL_VALUE_FAILSAFE;
+      pwm_channels[rollChannelNumber]  = GPF_RC_CHANNEL_VALUE_FAILSAFE;
+      pwm_channels[pitchChannelNumber] = GPF_RC_CHANNEL_VALUE_FAILSAFE;      
 }
 
 unsigned int GPF_CRSF::getPwmChannelPos(uint8_t channelNumber) {
