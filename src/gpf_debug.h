@@ -29,6 +29,9 @@
 //#define DEBUG_GPF_SDCARD_ENABLED
 #define DEBUG_GPF_SDCARD_DELAY    1000
 
+#define DEBUG_GPF_MUSIC_PLAYER_ENABLED
+#define DEBUG_GPF_MUSIC_PLAYER_DELAY    1000
+
 #ifdef DEBUG_GPF_ENABLED
  #define DebugStream_GPF                   Serial //Port USB
  #define DEBUG_GPF_PRINT(...)              DebugStream_GPF.print(__VA_ARGS__)
@@ -98,6 +101,16 @@
  #define DebugStream_GPF_SDCARD              
  #define DEBUG_GPF_SDCARD_PRINT(...)         
  #define DEBUG_GPF_SDCARD_PRINTLN(...)       
+#endif
+
+#ifdef DEBUG_GPF_MUSIC_PLAYER_ENABLED
+ #define DebugStream_GPF_MUSIC_PLAYER        Serial //Port USB
+ #define DEBUG_GPF_MUSIC_PLAYER_PRINT(...)   DebugStream_GPF_MUSIC_PLAYER.print(__VA_ARGS__)
+ #define DEBUG_GPF_MUSIC_PLAYER_PRINTLN(...) DebugStream_GPF_MUSIC_PLAYER.println(__VA_ARGS__)
+#else
+ #define DebugStream_GPF_MUSIC_PLAYER
+ #define DEBUG_GPF_MUSIC_PLAYER_PRINT(...)         
+ #define DEBUG_GPF_MUSIC_PLAYER_PRINTLN(...)       
 #endif
 
 #endif

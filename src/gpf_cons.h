@@ -9,15 +9,20 @@
 #ifndef GPF_CONS_H 
 #define GPF_CONS_H
 
+#define GPF_FLIGHT_MODE_1_EQUAL_THROTTLE_FOR_TESTS_ONLY    1
+#define GPF_FLIGHT_MODE_2_FUSION_TYPE_COMPLEMENTARY_FILTER 2
+#define GPF_FLIGHT_MODE_3_FUSION_TYPE_MADGWICK             3
+
 #define GPF_MISC_PROG_CURRENT_VERSION      101
-#define GPF_MISC_CONFIG_CURRENT_VERSION    14
+#define GPF_MISC_CONFIG_CURRENT_VERSION    15
 #define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_NUMERO  20
 #define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_PLUS    4
 #define GPF_MISC_NUMBER_OF_BUTTONS_TYPE_MINUS   4
 #define GPF_MISC_PIN_BUZZER              33
 
 #define GPF_MISC_FORMAT_DATE_TIME_LOGGING     0 //YYYYMMDD HHMMSS.VVV //VVV = milliseconds
-#define GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1  1 //YYYY-MM-DD HH:MM:SS
+#define GPF_MISC_FORMAT_DATE_TIME_FRIENDLY    1 //YYYY-MM-DD HH:MM:SS
+#define GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US 2 //YYYY-MM-DD HH:MM:SS uuuuuu //Avec micro seconds
 
 typedef enum { // *** Ne pas changer l'ordre car sert aussi pour enregistrer config dans eeprom ***
     GPF_IMU_SENSOR_ACCELEROMETER,
@@ -64,6 +69,9 @@ typedef enum { // *** Ne pas changer l'ordre car sert aussi pour enregistrer con
     GPF_RC_STICK_ARM,
     GPF_RC_STICK_FLIGHT_MODE,
     GPF_RC_STICK_BLACK_BOX,
+    GPF_RC_STICK_MUSIC_PLAYER_VOLUME,
+    GPF_RC_STICK_MUSIC_PLAYER_TRACK,
+    GPF_RC_STICK_MUSIC_PLAYER_LIST,
 
     GPF_RC_STICK_ITEM_COUNT // MUST BE LAST
 } gpf_rc_stick_type_enum;
@@ -121,13 +129,16 @@ typedef enum {
 #define GPF_RC_STICK_ELEVATOR         GPF_RC_STICK_PITCH           
 #define GPF_RC_STICK_RUDDER           GPF_RC_STICK_YAW             
 
-#define GPF_RC_STICK_ROLL_DEFAULT_CHANNEL        1
-#define GPF_RC_STICK_PITCH_DEFAULT_CHANNEL       2
-#define GPF_RC_STICK_THROTTLE_DEFAULT_CHANNEL    3
-#define GPF_RC_STICK_YAW_DEFAULT_CHANNEL         4
-#define GPF_RC_STICK_ARM_DEFAULT_CHANNEL         7
-#define GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL 5
-#define GPF_RC_STICK_BLACK_BOX_DEFAULT_CHANNEL   7
+#define GPF_RC_STICK_ROLL_DEFAULT_CHANNEL                 1
+#define GPF_RC_STICK_PITCH_DEFAULT_CHANNEL                2
+#define GPF_RC_STICK_THROTTLE_DEFAULT_CHANNEL             3
+#define GPF_RC_STICK_YAW_DEFAULT_CHANNEL                  4
+#define GPF_RC_STICK_ARM_DEFAULT_CHANNEL                  7
+#define GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL          5
+#define GPF_RC_STICK_BLACK_BOX_DEFAULT_CHANNEL            7
+#define GPF_RC_STICK_MUSIC_PLAYER_VOLUME_DEFAULT_CHANNEL  11
+#define GPF_RC_STICK_MUSIC_PLAYER_TRACK_DEFAULT_CHANNEL   12
+#define GPF_RC_STICK_MUSIC_PLAYER_LIST_DEFAULT_CHANNEL    8
 
 #define GPF_RC_CHANNEL_VALUE_MIN 1000.0 //us
 #define GPF_RC_CHANNEL_VALUE_MID 1500.0 //us
@@ -144,6 +155,7 @@ typedef enum {
 #define GPF_CONTROLLER_MAX_DEGREE_PITCH  30.0     //Max pitch angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
 #define GPF_CONTROLLER_MAX_DEGREE_YAW   160.0     //Max yaw rate in deg/sec
 
+/*
 #define GPF_CONTROLLER_Kp_roll_angle   0.2    //Roll P-gain - angle mode 
 #define GPF_CONTROLLER_Ki_roll_angle   0.3    //Roll I-gain - angle mode
 #define GPF_CONTROLLER_Kd_roll_angle   0.05   //Roll D-gain - angle mode (has no effect on controlANGLE2)
@@ -155,6 +167,7 @@ typedef enum {
 #define GPF_CONTROLLER_Kp_yaw  0.3           //Yaw P-gain
 #define GPF_CONTROLLER_Ki_yaw  0.05          //Yaw I-gain
 #define GPF_CONTROLLER_Kd_yaw  0.00015       //Yaw D-gain (be careful when increasing too high, motors will begin to overheat!)
+*/
 
 #define GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION 50 //us
 
@@ -163,9 +176,10 @@ typedef enum {
 #define GPF_RC_CHANNEL_POSITION_VALUE_HIGH     1750 //us
 
 typedef enum { 
-    GPF_RC_CHANNEL_POSITION_LOW  = 1250,
-    GPF_RC_CHANNEL_POSITION_MID  = 1500,
-    GPF_RC_CHANNEL_POSITION_HIGH = 1750,
+    GPF_RC_CHANNEL_POSITION_UNKNOWN  = 0,
+    GPF_RC_CHANNEL_POSITION_LOW      = 1250,
+    GPF_RC_CHANNEL_POSITION_MID      = 1500,
+    GPF_RC_CHANNEL_POSITION_HIGH     = 1750,
 
 } gpf_rc_channel_position_type_enum;
 

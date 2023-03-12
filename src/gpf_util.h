@@ -29,10 +29,14 @@ uint16_t gpf_util_shiftBitsToBigEndian_16(uint16_t val);
 uint32_t gpf_util_shiftBitsToBigEndian_32(uint32_t val);
 
 int    gpf_util_freeRam();
+gpf_rc_channel_position_type_enum gpf_util_getPwmChannelToPosType(int currentPos);
 bool   gpf_util_isPwmChannelAtPos(int currentPos, gpf_rc_channel_position_type_enum posRequired);
 void   gpf_util_resetConfigToDefault(gpf_config_struct *ptr);
 time_t gpf_util_getTeensy3Time();
 void   gpf_util_beep(uint16_t frequency, uint32_t duration = 0UL);
 float  gpf_util_invSqrt(float x);
+
+
+char*  gpf_util_get_dateTimeString(uint8_t format, bool addSpace);
 
 #endif

@@ -11,6 +11,8 @@
 #include "gpf_cons.h"
 #include <TimeLib.h>
 
+char   gpf_util_dateTimeString[30] = ""; //Augmenter au besoin si on ajoute des choses dans la fonction ci-dessous.
+
 void gpf_util_blinkMainBoardLed(uint8_t nbrBlink) { 
  // Attention, la LED_BUILTIN (pin 13) est la même pin que le SPI SCK sur un Teensy 4.1 
  // alors une fois mon SPI initialisé, je ne devrait plus me servir de cette fonction.
@@ -44,6 +46,30 @@ int gpf_util_freeRam() {
   return (char *)&_heap_end - __brkval;
 }
 
+gpf_rc_channel_position_type_enum gpf_util_getPwmChannelToPosType(int currentPos) {
+  gpf_rc_channel_position_type_enum retour = GPF_RC_CHANNEL_POSITION_UNKNOWN;
+
+  //Low
+  if (currentPos < (GPF_RC_CHANNEL_POSITION_LOW - GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION)) {
+   retour = GPF_RC_CHANNEL_POSITION_LOW;
+  } else {
+   //Mid
+   if (
+       ((GPF_RC_CHANNEL_POSITION_MID + GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION) > currentPos) &&
+       ((GPF_RC_CHANNEL_POSITION_MID - GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION) < currentPos)
+      ) {
+    retour = GPF_RC_CHANNEL_POSITION_MID;
+   } else {
+    //High
+    if (currentPos > (GPF_RC_CHANNEL_POSITION_HIGH + GPF_RC_CHANNEL_COMPARE_VALUE_PRECISION)) {
+     retour = GPF_RC_CHANNEL_POSITION_HIGH;
+    } 
+   }  
+  }
+
+  return retour;
+}
+
 bool gpf_util_isPwmChannelAtPos(int currentPos, gpf_rc_channel_position_type_enum channel_position_required) {
   bool retour = false;
 
@@ -73,13 +99,16 @@ void  gpf_util_resetConfigToDefault(gpf_config_struct *ptr) {
 
    ptr->version          = GPF_MISC_CONFIG_CURRENT_VERSION;
 
-   ptr->channelMaps[GPF_RC_STICK_ROLL]        = GPF_RC_STICK_ROLL_DEFAULT_CHANNEL; 
-   ptr->channelMaps[GPF_RC_STICK_PITCH]       = GPF_RC_STICK_PITCH_DEFAULT_CHANNEL; 
-   ptr->channelMaps[GPF_RC_STICK_THROTTLE]    = GPF_RC_STICK_THROTTLE_DEFAULT_CHANNEL; 
-   ptr->channelMaps[GPF_RC_STICK_YAW]         = GPF_RC_STICK_YAW_DEFAULT_CHANNEL; 
-   ptr->channelMaps[GPF_RC_STICK_ARM]         = GPF_RC_STICK_ARM_DEFAULT_CHANNEL;   
-   ptr->channelMaps[GPF_RC_STICK_FLIGHT_MODE] = GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL;   
-   ptr->channelMaps[GPF_RC_STICK_BLACK_BOX]   = GPF_RC_STICK_BLACK_BOX_DEFAULT_CHANNEL;   
+   ptr->channelMaps[GPF_RC_STICK_ROLL]                = GPF_RC_STICK_ROLL_DEFAULT_CHANNEL; 
+   ptr->channelMaps[GPF_RC_STICK_PITCH]               = GPF_RC_STICK_PITCH_DEFAULT_CHANNEL; 
+   ptr->channelMaps[GPF_RC_STICK_THROTTLE]            = GPF_RC_STICK_THROTTLE_DEFAULT_CHANNEL; 
+   ptr->channelMaps[GPF_RC_STICK_YAW]                 = GPF_RC_STICK_YAW_DEFAULT_CHANNEL; 
+   ptr->channelMaps[GPF_RC_STICK_ARM]                 = GPF_RC_STICK_ARM_DEFAULT_CHANNEL;   
+   ptr->channelMaps[GPF_RC_STICK_FLIGHT_MODE]         = GPF_RC_STICK_FLIGHT_MODE_DEFAULT_CHANNEL;   
+   ptr->channelMaps[GPF_RC_STICK_BLACK_BOX]           = GPF_RC_STICK_BLACK_BOX_DEFAULT_CHANNEL;   
+   ptr->channelMaps[GPF_RC_STICK_MUSIC_PLAYER_VOLUME] = GPF_RC_STICK_MUSIC_PLAYER_VOLUME_DEFAULT_CHANNEL;
+   ptr->channelMaps[GPF_RC_STICK_MUSIC_PLAYER_TRACK]  = GPF_RC_STICK_MUSIC_PLAYER_TRACK_DEFAULT_CHANNEL;
+   ptr->channelMaps[GPF_RC_STICK_MUSIC_PLAYER_LIST]   = GPF_RC_STICK_MUSIC_PLAYER_LIST_DEFAULT_CHANNEL;
 
    ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_PROPORTIONAL]   = 0.2     * GPF_PID_STORAGE_MULTIPLIER; //0.2  //Roll P-gain - angle mode 
    ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_INTEGRAL]       = 0.3     * GPF_PID_STORAGE_MULTIPLIER; //0.3  //Roll I-gain - angle mode 
@@ -134,5 +163,105 @@ float gpf_util_invSqrt(float x) {
   return y;
   */
   return 1.0/sqrtf(x); //Teensy is fast enough to just take the compute penalty lol suck it arduino nano
+}
+
+char* gpf_util_get_dateTimeString(uint8_t format, bool addSpace) {
+   int i;
+   char tmpBuffer[10]       = "";
+   long l;
+
+   strcpy(gpf_util_dateTimeString,"");
+
+   itoa(year(), tmpBuffer, 10);
+   strcat(gpf_util_dateTimeString, tmpBuffer); //4
+
+   if ( (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY) || (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US) ) {
+    strcat(gpf_util_dateTimeString,"-"); //1
+   }
+    
+   i = month();
+   if (i < 10) {
+    strcat(gpf_util_dateTimeString,"0");
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(gpf_util_dateTimeString, tmpBuffer); //2
+
+   if ( (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY) || (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US) ) {
+    strcat(gpf_util_dateTimeString,"-"); //1
+   }
+
+   i = day();
+   if (i < 10) {
+    strcat(gpf_util_dateTimeString,"0");    
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(gpf_util_dateTimeString, tmpBuffer); //2
+
+   if (format == GPF_MISC_FORMAT_DATE_TIME_LOGGING) {      
+    strcat(gpf_util_dateTimeString, " "); //1 //,
+   } else {
+    strcat(gpf_util_dateTimeString, " "); //1
+   }
+
+   i = hour();
+   if (i < 10) {
+    strcat(gpf_util_dateTimeString,"0");    
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(gpf_util_dateTimeString, tmpBuffer); //2
+
+   if ( (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY) || (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US) ) {
+    strcat(gpf_util_dateTimeString,":"); //1
+   }
+
+   i = minute();
+   if (i < 10) {
+    strcat(gpf_util_dateTimeString,"0");    
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(gpf_util_dateTimeString, tmpBuffer); //2
+
+   if ( (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY) || (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US) ) {
+    strcat(gpf_util_dateTimeString,":"); //1
+   }
+
+   i = second();
+   if (i < 10) {
+    strcat(gpf_util_dateTimeString,"0");    
+   }
+   itoa(i, tmpBuffer, 10);
+   strcat(gpf_util_dateTimeString, tmpBuffer); //2
+
+   if ( (format == GPF_MISC_FORMAT_DATE_TIME_LOGGING) || (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US) ) {
+
+     strcat(gpf_util_dateTimeString,"."); //1
+
+     //i = millis() % 1000;
+     l = micros() % 1000000;
+     if (l < 10) {
+      strcat(gpf_util_dateTimeString,"0");    
+     }
+     if (l < 100) {
+      strcat(gpf_util_dateTimeString,"0");    
+     }
+     if (l < 1000) {
+      strcat(gpf_util_dateTimeString,"0");    
+     }
+     if (l < 10000) {
+      strcat(gpf_util_dateTimeString,"0");    
+     }
+     if (l < 100000) {
+      strcat(gpf_util_dateTimeString,"0");    
+     }
+     ltoa(l, tmpBuffer, 10);
+     strcat(gpf_util_dateTimeString, tmpBuffer); //6     
+     
+   }
+
+   if (addSpace) {
+     strcat(gpf_util_dateTimeString," "); //1
+   }
+
+   return gpf_util_dateTimeString;
 }
 

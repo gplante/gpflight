@@ -16,15 +16,15 @@
 #include "MPU6050.h"
 
 //Uncomment only one full scale gyro range (deg/sec)
-//#define GPF_IMU_GYRO_250DPS //Default
+#define GPF_IMU_GYRO_250DPS //Default
 //#define GPF_IMU_GYRO_500DPS
-#define GPF_IMU_GYRO_1000DPS
+//#define GPF_IMU_GYRO_1000DPS //Très vache ???
 //#define GPF_IMU_GYRO_2000DPS
 
 //Uncomment only one full scale accelerometer range (G's)
-//#define GPF_IMU_ACCEL_2G //Default
-#define GPF_IMU_ACCEL_4G
-//#define GPF_IMU_ACCEL_8G
+#define GPF_IMU_ACCEL_2G //Default
+//#define GPF_IMU_ACCEL_4G //gp
+//#define GPF_IMU_ACCEL_8G //Marche pas bien ???
 //#define GPF_IMU_ACCEL_16G
 
 #define GPF_IMU_GYRO_FS_SEL_250    MPU6050_GYRO_FS_250
@@ -75,6 +75,7 @@ class GPF_IMU {
 
         void initialize(gpf_config_struct *);        
         bool getIMUData();
+        void set_fusion_type(uint8_t flight_mode);
         void doFusion();
         void doFusion_madgwick6DOF();
         void doFusion_complementaryFilter();
@@ -82,7 +83,7 @@ class GPF_IMU {
         void calibrate();
         void meansensors();
 
-        uint8_t fusion_type = GPF_IMU_FUSION_TYPE_MADGWICK;
+        uint8_t fusion_type = GPF_IMU_FUSION_TYPE_MADGWICK; //GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER; //GPF_IMU_FUSION_TYPE_MADGWICK;
         int16_t calibration_offset_ax, calibration_offset_ay, calibration_offset_az, calibration_offset_gx, calibration_offset_gy, calibration_offset_gz;
         int16_t accX_raw_no_offsets,   accY_raw_no_offsets,   accZ_raw_no_offsets,   gyrX_raw_no_offsets,   gyrY_raw_no_offsets,   gyrZ_raw_no_offsets;
         int16_t accX_raw_plus_offsets, accY_raw_plus_offsets, accZ_raw_plus_offsets, gyrX_raw_plus_offsets, gyrY_raw_plus_offsets, gyrZ_raw_plus_offsets;
@@ -93,6 +94,11 @@ class GPF_IMU {
 
         
         unsigned long errorCount = 0;
+
+        //Filter parameters - Defaults tuned for 2kHz loop rate; Do not touch unless you know what you are doing:
+        float B_madgwick = 0.04; //0.99; //0.04 //Madgwick filter parameter //Higher B madgwick leads to a noisier estimate, while lower B madgwick leads to a slower to respond estimate.
+        float B_accel = 0.14;    //Accelerometer LP filter paramter, (MPU6050 default: 0.14. MPU9250 default: 0.2)
+        float B_gyro = 0.1;      //Gyro LP filter paramter, (MPU6050 default: 0.1. MPU9250 default: 0.17)
     private:
         gpf_config_struct *myConfig_ptr = NULL;
 
@@ -108,11 +114,6 @@ class GPF_IMU {
         float q1 = 0.0f;
         float q2 = 0.0f;
         float q3 = 0.0f;
-
-        //Filter parameters - Defaults tuned for 2kHz loop rate; Do not touch unless you know what you are doing:
-        float B_madgwick = 0.04; //0.99; //0.04 //Madgwick filter parameter //Higher B madgwick leads to a noisier estimate, while lower B madgwick leads to a slower to respond estimate.
-        float B_accel = 0.14;    //Accelerometer LP filter paramter, (MPU6050 default: 0.14. MPU9250 default: 0.2)
-        float B_gyro = 0.1;      //Gyro LP filter paramter, (MPU6050 default: 0.1. MPU9250 default: 0.17)
         
 };
 

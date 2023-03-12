@@ -17,6 +17,7 @@
 #include "gpf_touch.h"
 #include "gpf_sdcard.h"
 #include "gpf_dshot.h"
+#include "gpf_music_player.h"
 
 class GPF {
     typedef void (GPF::*method_function)(bool, int, int);
@@ -41,7 +42,7 @@ class GPF {
         void manageAlarms();
         void getDesiredState();   
         void controlANGLE();
-        void controlComplementaryFilter();
+        
         void controlMixer();
         void scaleCommands();
         
@@ -50,6 +51,9 @@ class GPF {
         bool set_arm_IsArmed(bool);
         bool get_black_box_IsEnabled();
         bool set_black_box_IsEnabled(bool);
+        void black_box_writeHeader();
+        void black_box_writeRow();
+        void get_set_flightMode();
         void displayArmed();        
 
         void displayAndProcessMenu();
@@ -80,9 +84,10 @@ class GPF {
         GPF_TOUCH    myTouch;
         GPF_SDCARD   mySdCard;
         GPF_DSHOT    myDshot;
+        GPF_MUSIC_PLAYER    myMusicPlayer;
 
         gpf_telemetry_info_s gpf_telemetry_info;
-        int16_t  menu_current  = GPF_MENU_MAIN_MENU; //GPF_MENU_TEST_MOTORS; //GPF_MENU_MAIN_MENU;
+        int16_t  menu_current  = GPF_MENU_MAIN_MENU; //GPF_MENU_TEST_MOTORS; //GPF_MENU_TEST_MOTORS; //GPF_MENU_MAIN_MENU;
         //int16_t  menu_previous = -1; //Pour forcer un affichage du menu le premier coup
         bool     menu_pleaseRefresh = true;
 
@@ -96,10 +101,9 @@ class GPF {
         Adafruit_GFX_Button_2 buttons_Minus[GPF_MISC_NUMBER_OF_BUTTONS_TYPE_MINUS];
         elapsedMillis black_box_sinceLog    = 0;
 
-        char     dateTimeString[25] = ""; //Augmenter au besoin si on ajoute des choses dans la fonction ci-dessous.
-        char*    get_dateTimeString(uint8_t format, bool addSpace);
+        
 
-        bool          alarmVoltageLow = false;  
+        bool          alarmVoltageLow = false;          
 
         //Normalized desired state:
         float desired_state_throttle, desired_state_roll, desired_state_pitch, desired_state_yaw;
@@ -113,9 +117,11 @@ class GPF {
         //Mixer
         float motor_command_scaled[GPF_MOTOR_ITEM_COUNT];
         int motor_command_DSHOT[GPF_MOTOR_ITEM_COUNT];
+        uint8_t flight_mode = GPF_FLIGHT_MODE_3_FUSION_TYPE_MADGWICK; 
 
     private:
         elapsedMillis debug_sincePrint;        
+        
         unsigned long loopCount             = 0;
         unsigned long loopStartedAt         = 0; //us
         unsigned long firstLoopStartedAt    = 0; //us
@@ -130,11 +136,12 @@ class GPF {
 
         gpf_config_struct *myConfig_ptr = NULL;
         bool          arm_isArmed = false;
+        elapsedMillis arm_isArmed_sinceChange;
         //bool          arm_pleaseDesarmFirst = true;
         bool          arm_allowArming     = false;
         bool          black_box_isEnabled = false;
         
-        char   gpf_rc_stick_descriptions[GPF_RC_STICK_ITEM_COUNT][10] = {"Roll", "Pitch", "Throttle", "Yaw", "Arm", "Mode vol", "Black Box"}; //Max 9 carac. sinon augmenter taille tableau
+        char   gpf_rc_stick_descriptions[GPF_RC_STICK_ITEM_COUNT][10] = {"Roll", "Pitch", "Throttle", "Yaw", "Arm", "Mode vol", "Black Box", "MP3 VOL", "MP3 TRACK", "MP3 LIST"}; //Max 9 carac. sinon augmenter taille tableau
         char   gpf_axe_descriptions[GPF_AXE_ITEM_COUNT][6]            = {"Roll", "Pitch", "Yaw"}; //Max 5 carac. sinon augmenter taille tableau
         char   gpf_pid_term_descriptions[GPF_PID_TERM_ITEM_COUNT][2]  = {"P", "I", "D"}; //Max 1 carac. sinon augmenter taille tableau
 

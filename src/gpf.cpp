@@ -51,6 +51,7 @@ void GPF::initialize(gpf_config_struct *ptr) {
     myDisplay.initialize();
     myDisplay.println("GPFlight");   
     myTouch.initialize();
+    myMusicPlayer.initialize();
     
 }
 
@@ -111,8 +112,6 @@ void GPF::debugDisplayLoopStats() {
    DEBUG_GPF_PRINT(arm_allowArming);
    DEBUG_GPF_PRINT(" get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)=");
    DEBUG_GPF_PRINT(get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
-   
-   
 
    DEBUG_GPF_PRINTLN();
 
@@ -277,10 +276,15 @@ bool GPF::get_arm_IsArmed() {
 }
 
 bool GPF::set_arm_IsArmed(bool b) {
+  bool arm_isArmed_old = arm_isArmed;
+
   arm_isArmed = b && arm_allowArming;
 
   //todo checkey aussi d'autres conditions comme par exemple si IMU fonctionne bien ???
   
+  if (arm_isArmed != arm_isArmed_old) {
+   arm_isArmed_sinceChange = 0;
+  }
   return arm_isArmed;
 }
 
@@ -291,6 +295,225 @@ bool GPF::get_black_box_IsEnabled() {
 bool GPF::set_black_box_IsEnabled(bool b) {
   black_box_isEnabled = b;
   return black_box_isEnabled;
+}
+
+void GPF::black_box_writeHeader() {    
+       //Date/Time
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("date_time,");
+
+       //acc?_raw_plus_offsets
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accX_raw_plus_offsets,");
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accY_raw_plus_offsets,");
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accZ_raw_plus_offsets,");  
+
+       //gyr?_raw_plus_offsets
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrX_raw_plus_offsets,"); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrY_raw_plus_offsets,"); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrZ_raw_plus_offsets,");   
+
+       //acc?_output avant lp filter (lp filter seulement si fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accX_output_no_lp_filter,");
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accY_output_no_lp_filter,");
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accZ_output_no_lp_filter,");  
+
+       //gyr?_output avant lp filter (lp filter seulement si fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrX_output_no_lp_filter,"); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrY_output_no_lp_filter,"); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrZ_output_no_lp_filter,");   
+
+       //acc?_output après lp filter (lp filter seulement si fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("     ");  
+
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accX_output,");  
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accY_output,");  
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("accZ_output,");    
+
+       //gyr?_output après lp filter (lp filter seulement si fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrX_output,");   
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrY_output,");   
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("gyrZ_output,");     
+
+       //pitch/roll/yaw degres après fusion (peu importe si fution Madgwick ou Complementary filter)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("     ");  
+
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("fusion_degree_pitch,");   
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("fusion_degree_roll,");   
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("fusion_degree_yaw,");     
+
+       //Sticks
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("stick_pitch,");     
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("stick_roll,");     
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("stick_yaw,");       
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("stick_throttle,");      
+
+       //Desired state
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("desired_state_pitch,");     
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("desired_state_roll,");     
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("desired_state_yaw,");       
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("desired_state_throttle,");      
+
+       //controlANGLE() / PID
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("pitch_PID,");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("roll_PID,");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("yaw_PID,");        
+
+       //controlMixer() //Output des moteurs
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("     ");  
+
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("motor_command_scaled_back_right,");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("motor_command_scaled_front_right,");       
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("motor_command_scaled_back_left,");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("motor_command_scaled_front_left,");        
+
+       //Valeurs DSHOT envoyées aux moteurs
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("motor_command_DSHOT_back_right,");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("motor_command_DSHOT_front_right,");       
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("motor_command_DSHOT_back_left,");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("motor_command_DSHOT_front_left,");         
+
+       //Autre
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("flight_mode,");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("get_isInFailSafe,"); 
+
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->println("end");
+
+}
+
+void GPF::black_box_writeRow() {    
+
+       //Date/Time
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(gpf_util_get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");
+       
+       //acc?_raw_plus_offsets
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accX_raw_plus_offsets);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accY_raw_plus_offsets);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accZ_raw_plus_offsets);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");  
+
+       //gyr?_raw_plus_offsets
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrX_raw_plus_offsets);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(","); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrY_raw_plus_offsets);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(","); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrZ_raw_plus_offsets);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");   
+
+       //acc?_output avant lp filter (lp filter seulement si fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accX_raw_plus_offsets / GPF_IMU_ACCEL_SCALE_FACTOR,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accY_raw_plus_offsets / GPF_IMU_ACCEL_SCALE_FACTOR,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accZ_raw_plus_offsets / GPF_IMU_ACCEL_SCALE_FACTOR,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");  
+
+       //gyr?_output avant lp filter (lp filter seulement si fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrX_raw_plus_offsets / GPF_IMU_GYRO_SCALE_FACTOR,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(","); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrY_raw_plus_offsets / GPF_IMU_GYRO_SCALE_FACTOR,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(","); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrZ_raw_plus_offsets / GPF_IMU_GYRO_SCALE_FACTOR,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");    
+
+       //acc?_output après lp filter (lp filter seulement si fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("     ");  
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accX_output,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");  
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accY_output,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");  
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.accZ_output,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");    
+
+       //gyr?_output après lp filter (lp filter seulement si fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrX_output,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");   
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrY_output,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");   
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.gyrZ_output,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");     
+
+       //pitch/roll/yaw degres après fusion (peu importe si fution Madgwick ou Complementary filter)
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("     ");  
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.fusion_degree_pitch,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");   
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.fusion_degree_roll,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");   
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.fusion_degree_yaw,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");     
+
+       //Sticks
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_PITCH]));
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");     
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_ROLL]));
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");     
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_YAW]));
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");       
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myRc.getPwmChannelValue(myConfig_ptr->channelMaps[GPF_RC_STICK_THROTTLE]));
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+
+       //Desired state
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(desired_state_pitch,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");     
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(desired_state_roll,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");     
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(desired_state_yaw,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");       
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(desired_state_throttle,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");       
+
+       //controlANGLE() / PID
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(pitch_PID,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(roll_PID,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(yaw_PID,6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");        
+
+       //controlMixer() //Output des moteurs
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("     ");  
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(motor_command_scaled[GPF_MOTOR_BACK_RIGHT],6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(motor_command_scaled[GPF_MOTOR_FRONT_RIGHT],6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");       
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(motor_command_scaled[GPF_MOTOR_BACK_LEFT],6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(motor_command_scaled[GPF_MOTOR_FRONT_LEFT],6);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");        
+
+       //Valeurs DSHOT envoyées aux moteurs
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT]);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");       
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");         
+
+       //Autre
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(flight_mode);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myRc.get_isInFailSafe());
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->println("end");
+  
+}
+
+void GPF::get_set_flightMode() {    
+  
+  if (get_IsStickInPosition(GPF_RC_STICK_FLIGHT_MODE, GPF_RC_CHANNEL_POSITION_HIGH)) {
+    flight_mode = GPF_FLIGHT_MODE_3_FUSION_TYPE_MADGWICK;
+  } else {
+    if (get_IsStickInPosition(GPF_RC_STICK_FLIGHT_MODE, GPF_RC_CHANNEL_POSITION_MID)) {
+      flight_mode = GPF_FLIGHT_MODE_2_FUSION_TYPE_COMPLEMENTARY_FILTER;
+    } else {
+      flight_mode = GPF_FLIGHT_MODE_1_EQUAL_THROTTLE_FOR_TESTS_ONLY;
+    }
+  }
+
 }
 
 void GPF::displayArmed() {    
@@ -1536,13 +1759,15 @@ unsigned long GPF::get_loopCount() {
 }
 
 void GPF::manageAlarms() {
-  const uint16_t ALARM_TOGGLE_RURATION = 1000; //ms
+  const uint16_t ALARM_TOGGLE_DURATION = 1000; //ms
   static elapsedMillis sinceChange = 0;
   static bool          sirenAlarmToneToggle  = false;
+         bool          somethingToDo         = false;
   //alarmVoltageLow = true; //test
 
   if (alarmVoltageLow || myRc.get_isInFailSafe() ) {
-    if (sinceChange > ALARM_TOGGLE_RURATION) {
+    somethingToDo = true;
+    if (sinceChange > ALARM_TOGGLE_DURATION) {
       if (sirenAlarmToneToggle)  {
        gpf_util_beep(GPF_UTIL_BEEP_TONE_ALARM); 
       } else {       
@@ -1552,95 +1777,19 @@ void GPF::manageAlarms() {
       sinceChange = 0;
     }
 
-  } else {
-    noTone(GPF_MISC_PIN_BUZZER);     // Stop sound...
+  }
+
+  if (!somethingToDo) { //On beep pendant 1 seconde lorsqu'on arm ou desarm   
+   if (arm_isArmed_sinceChange < ALARM_TOGGLE_DURATION) {
+    somethingToDo = true; 
+    gpf_util_beep(GPF_UTIL_BEEP_TONE_ALARM); 
+   }
+  }
+
+  if (!somethingToDo) {
+   noTone(GPF_MISC_PIN_BUZZER);     // Stop sound...
   }
 }
-
-char* GPF::get_dateTimeString(uint8_t format, bool addSpace) {
-   int i;
-   char tmpBuffer[6]       = "";
-
-   strcpy(dateTimeString,"");
-
-   itoa(year(), tmpBuffer, 10);
-   strcat(dateTimeString, tmpBuffer); //4
-
-   if (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1) {
-    strcat(dateTimeString,"-"); //1
-   }
-    
-   i = month();
-   if (i < 10) {
-    strcat(dateTimeString,"0");
-   }
-   itoa(i, tmpBuffer, 10);
-   strcat(dateTimeString, tmpBuffer); //2
-
-   if (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1) {
-    strcat(dateTimeString,"-"); //1
-   }
-
-   i = day();
-   if (i < 10) {
-    strcat(dateTimeString,"0");    
-   }
-   itoa(i, tmpBuffer, 10);
-   strcat(dateTimeString, tmpBuffer); //2
-
-   strcat(dateTimeString, " "); //1
-
-   i = hour();
-   if (i < 10) {
-    strcat(dateTimeString,"0");    
-   }
-   itoa(i, tmpBuffer, 10);
-   strcat(dateTimeString, tmpBuffer); //2
-
-   if (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1) {
-    strcat(dateTimeString,":");
-   }
-
-   i = minute();
-   if (i < 10) {
-    strcat(dateTimeString,"0");    
-   }
-   itoa(i, tmpBuffer, 10);
-   strcat(dateTimeString, tmpBuffer); //2
-
-   if (format == GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1) {
-    strcat(dateTimeString,":");
-   }
-
-   i = second();
-   if (i < 10) {
-    strcat(dateTimeString,"0");    
-   }
-   itoa(i, tmpBuffer, 10);
-   strcat(dateTimeString, tmpBuffer); //2
-
-   if (format == GPF_MISC_FORMAT_DATE_TIME_LOGGING) {      
-     
-     strcat(dateTimeString,".");         
-
-     i = millis() % 1000;
-     if (i < 10) {
-      strcat(dateTimeString,"0");    
-     }
-     if (i < 100) {
-      strcat(dateTimeString,"0");    
-     }
-     itoa(i, tmpBuffer, 10);
-     strcat(dateTimeString, tmpBuffer); //3
-     
-     if (addSpace) {
-        strcat(dateTimeString," "); //1
-     }
-   }
-
-   return dateTimeString;
-}
-
 
 void GPF::getDesiredState() {
   // Cette fonction, légèrement adaptée pour ce projet, provient du projet dRehmFlight VTOL Flight Controller de Nicholas Rehm à https://github.com/nickrehm/dRehmFlight
@@ -1694,8 +1843,6 @@ void GPF::controlANGLE() {
 
   const uint16_t THROTTLE_MINIMUM = 1060;
 
-  //todo PIDs
-  /*
   float Kp_roll_angle  = myConfig_ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_PROPORTIONAL]  / GPF_PID_STORAGE_MULTIPLIER;
   float Ki_roll_angle  = myConfig_ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_INTEGRAL]      / GPF_PID_STORAGE_MULTIPLIER;
   float Kd_roll_angle  = myConfig_ptr->pids[GPF_AXE_ROLL][GPF_PID_TERM_DERIVATIVE]    / GPF_PID_STORAGE_MULTIPLIER;
@@ -1707,8 +1854,7 @@ void GPF::controlANGLE() {
   float Kp_yaw         = myConfig_ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_PROPORTIONAL]   / GPF_PID_STORAGE_MULTIPLIER;
   float Ki_yaw         = myConfig_ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_INTEGRAL]       / GPF_PID_STORAGE_MULTIPLIER;
   float Kd_yaw         = myConfig_ptr->pids[GPF_AXE_YAW][GPF_PID_TERM_DERIVATIVE]     / GPF_PID_STORAGE_MULTIPLIER;
-  */
- 
+  
   static unsigned long micros_previous = 0;
   unsigned long current_time = micros();
   float time_elapsed = (current_time - micros_previous)/1000000.0;
@@ -1722,7 +1868,7 @@ void GPF::controlANGLE() {
   }
   integral_roll = constrain(integral_roll, -GPF_CONTROLLER_I_LIMIT, GPF_CONTROLLER_I_LIMIT); //Saturate integrator to prevent unsafe buildup
   derivative_roll = myImu.gyrX_output; //GyroX;
-  roll_PID = 0.01*(GPF_CONTROLLER_Kp_roll_angle*error_roll + GPF_CONTROLLER_Ki_roll_angle*integral_roll - GPF_CONTROLLER_Kd_roll_angle*derivative_roll); //Scaled by .01 to bring within -1 to 1 range
+  roll_PID = 0.01*(Kp_roll_angle*error_roll + Ki_roll_angle*integral_roll - Kd_roll_angle*derivative_roll); //Scaled by .01 to bring within -1 to 1 range
 
   //Pitch
   error_pitch = desired_state_pitch - myImu.fusion_degree_pitch;
@@ -1732,7 +1878,7 @@ void GPF::controlANGLE() {
   }
   integral_pitch = constrain(integral_pitch, -GPF_CONTROLLER_I_LIMIT, GPF_CONTROLLER_I_LIMIT); //Saturate integrator to prevent unsafe buildup
   derivative_pitch = myImu.gyrY_output;
-  pitch_PID = .01*(GPF_CONTROLLER_Kp_pitch_angle*error_pitch + GPF_CONTROLLER_Ki_pitch_angle*integral_pitch - GPF_CONTROLLER_Kd_pitch_angle*derivative_pitch); //Scaled by .01 to bring within -1 to 1 range
+  pitch_PID = .01*(Kp_pitch_angle*error_pitch + Ki_pitch_angle*integral_pitch - Kd_pitch_angle*derivative_pitch); //Scaled by .01 to bring within -1 to 1 range
 
   //Yaw, stablize on rate from GyroZ
   error_yaw = desired_state_yaw - myImu.gyrZ_output;
@@ -1742,7 +1888,7 @@ void GPF::controlANGLE() {
   }
   integral_yaw = constrain(integral_yaw, -GPF_CONTROLLER_I_LIMIT, GPF_CONTROLLER_I_LIMIT); //Saturate integrator to prevent unsafe buildup
   derivative_yaw = (error_yaw - error_yaw_prev)/time_elapsed; 
-  yaw_PID = .01*(GPF_CONTROLLER_Kp_yaw*error_yaw + GPF_CONTROLLER_Ki_yaw*integral_yaw + GPF_CONTROLLER_Kd_yaw*derivative_yaw); //Scaled by .01 to bring within -1 to 1 range
+  yaw_PID = .01*(Kp_yaw*error_yaw + Ki_yaw*integral_yaw + Kd_yaw*derivative_yaw); //Scaled by .01 to bring within -1 to 1 range
 
   //Update roll variables
   integral_roll_prev = integral_roll;
@@ -1752,11 +1898,6 @@ void GPF::controlANGLE() {
   error_yaw_prev = error_yaw;
   integral_yaw_prev = integral_yaw;
   
-}
-
-void GPF::controlComplementaryFilter() {
-  
-
 }
 
 void GPF::controlMixer() {
@@ -1778,18 +1919,17 @@ void GPF::controlMixer() {
    *channel_6_pwm - free auxillary channel, can be used to toggle things with an 'if' statement
    */
    
-  //Quad mixing - EXAMPLE
-  motor_command_scaled[GPF_MOTOR_FRONT_LEFT]  = desired_state_throttle - pitch_PID + roll_PID + yaw_PID; //Front Left //m1
-  motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] = desired_state_throttle - pitch_PID - roll_PID - yaw_PID; //Front Right //m2
-  motor_command_scaled[GPF_MOTOR_BACK_RIGHT]  = desired_state_throttle + pitch_PID - roll_PID + yaw_PID; //Back Right //m3
-  motor_command_scaled[GPF_MOTOR_BACK_LEFT]   = desired_state_throttle + pitch_PID + roll_PID - yaw_PID; //Back Left //m4
- 
-  //DEBUG_GPF_PRINT("desired_state_throttle:");    
-  //DEBUG_GPF_PRINTLN(desired_state_throttle);    
-
-  //DEBUG_GPF_PRINT("GPF_MOTOR_1:");    
-  //DEBUG_GPF_PRINTLN(motor_command_scaled[GPF_MOTOR_1]);    
-
+  if (flight_mode == GPF_FLIGHT_MODE_1_EQUAL_THROTTLE_FOR_TESTS_ONLY) {
+   motor_command_scaled[GPF_MOTOR_FRONT_LEFT]  = desired_state_throttle; //Front Left  //m4 //dRehmFlight m1
+   motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] = desired_state_throttle; //Front Right //m2 //dRehmFlight m2
+   motor_command_scaled[GPF_MOTOR_BACK_RIGHT]  = desired_state_throttle; //Back Right  //m1 //dRehmFlight m3
+   motor_command_scaled[GPF_MOTOR_BACK_LEFT]   = desired_state_throttle; //Back Left   //m3 //dRehmFlight m4
+  } else {
+   motor_command_scaled[GPF_MOTOR_FRONT_LEFT]  = desired_state_throttle - pitch_PID + roll_PID + yaw_PID; //Front Left  //m4 //dRehmFlight m1
+   motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] = desired_state_throttle - pitch_PID - roll_PID - yaw_PID; //Front Right //m2 //dRehmFlight m2
+   motor_command_scaled[GPF_MOTOR_BACK_RIGHT]  = desired_state_throttle + pitch_PID - roll_PID + yaw_PID; //Back Right  //m1 //dRehmFlight m3
+   motor_command_scaled[GPF_MOTOR_BACK_LEFT]   = desired_state_throttle + pitch_PID + roll_PID - yaw_PID; //Back Left   //m3 //dRehmFlight m4
+  }
   
 }
 
@@ -1799,16 +1939,16 @@ void GPF::scaleCommands() {
   //Dshot commands: 48 = Throttle 0% à 2047 = Throttle 100%
   
   //Scaled to 48 to 2000 for dshot protocol
-  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = motor_command_scaled[GPF_MOTOR_FRONT_LEFT]  * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; //m1
-  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; //m2
-  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = motor_command_scaled[GPF_MOTOR_BACK_RIGHT]  * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; //m3
-  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = motor_command_scaled[GPF_MOTOR_BACK_LEFT]   * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; //m4
+  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = motor_command_scaled[GPF_MOTOR_FRONT_LEFT]  * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; 
+  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = motor_command_scaled[GPF_MOTOR_FRONT_RIGHT] * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; 
+  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = motor_command_scaled[GPF_MOTOR_BACK_RIGHT]  * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; 
+  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = motor_command_scaled[GPF_MOTOR_BACK_LEFT]   * GPF_DSHOT_RESOLUTION + GPF_DSHOT_THROTTLE_MINIMUM; 
   
   //Constrain commands to motors within dshot bounds
-  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT],  GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); //m1
-  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT], GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); //m2
-  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT],  GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); //m3
-  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_LEFT],   GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); //m4
+  motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT]  = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_LEFT],  GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); 
+  motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT] = constrain(motor_command_DSHOT[GPF_MOTOR_FRONT_RIGHT], GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); 
+  motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT]  = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_RIGHT],  GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); 
+  motor_command_DSHOT[GPF_MOTOR_BACK_LEFT]   = constrain(motor_command_DSHOT[GPF_MOTOR_BACK_LEFT],   GPF_DSHOT_THROTTLE_MINIMUM, GPF_DSHOT_THROTTLE_MAXIMUM); 
 
 }
 

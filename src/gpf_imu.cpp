@@ -164,13 +164,19 @@ bool GPF_IMU::getIMUData() {
     return true;
 }
 
+void GPF_IMU::set_fusion_type(uint8_t flight_mode) {
+  if (flight_mode == GPF_FLIGHT_MODE_3_FUSION_TYPE_MADGWICK) {
+   fusion_type = GPF_IMU_FUSION_TYPE_MADGWICK; //fm-3
+  } else {
+   fusion_type = GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER; //fm-2 et fm-1
+  }
+}
+
 void GPF_IMU::doFusion() {
   
  if (fusion_type == GPF_IMU_FUSION_TYPE_MADGWICK) {
   doFusion_madgwick6DOF();
- }
-
- if (fusion_type == GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER) {
+ } else {
   doFusion_complementaryFilter();
  }
 

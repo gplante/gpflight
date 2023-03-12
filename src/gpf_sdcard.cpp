@@ -34,6 +34,7 @@ void GPF_SDCARD::initialize() {
       DEBUG_GPF_SDCARD_PRINTLN("Ok :-)");
 
       openFile(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG);
+      getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(gpf_util_get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY,true));
       getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->println("Démarrage du teensy");
       closeFile(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG);
      
@@ -136,7 +137,7 @@ bool GPF_SDCARD::openFile(gpf_sdcard_file_type_type_enum myFileType) {
 
      theFile[myFileType] = SD.open(theFileName[myFileType], FILE_WRITE);
      if (theFile[myFileType]) {
-      thefileIsOpen[myFileType] = false;
+      thefileIsOpen[myFileType] = true;
       //DEBUG_GPF_SDCARD_PRINT("Ouverture du fichier ");
       //DEBUG_GPF_SDCARD_PRINTLN(theFileName[myFileType]);
      } else {
@@ -150,9 +151,10 @@ bool GPF_SDCARD::openFile(gpf_sdcard_file_type_type_enum myFileType) {
 
 void GPF_SDCARD::closeFile(gpf_sdcard_file_type_type_enum myFileType) {
     if (sdCardInitOk) {
-     theFile[myFileType].close();
+     //theFile[myFileType].close();
      
      if (thefileIsOpen[myFileType]) {
+      theFile[myFileType].close();
       //DEBUG_GPF_SDCARD_PRINT("Fermeture du fichier ");
       //DEBUG_GPF_SDCARD_PRINTLN(theFileName[myFileType]);
      }

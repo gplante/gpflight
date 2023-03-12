@@ -86,7 +86,7 @@ void setup() {
   // Fin Date/Heure
 
   Wire.begin();           //La librairie I2Cdev en a besoin
-  //Wire.setClock(1000000); //Note this is 2.5 times the spec sheet 400 kHz max...
+  Wire.setClock(1000000); //Important pour pouvoir une loop à 2khz // Note this is 2.5 times the spec sheet 400 kHz max...
   //Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
   
   myFc.initialize(&myConfig);
@@ -94,17 +94,23 @@ void setup() {
   
   //myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
   DEBUG_GPF_PRINTLN("*******************************************");    
-  DEBUG_GPF_PRINTLN(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));    
-  DEBUG_GPF_PRINTLN(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_1,true));    
+  DEBUG_GPF_PRINTLN(gpf_util_get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));    
+  DEBUG_GPF_PRINTLN(gpf_util_get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US,true));    
+
+  myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG);
+  myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(gpf_util_get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY,true));
+  myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->println("setup() - Fin");
+  myFc.mySdCard.closeFile(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG);
+
 }
 
 elapsedMillis sinceChange;
 uint16_t      lastDshotCommandSent = 0;
 
 void loop() {
-    static bool          isArmed_previous              = true;
-    static bool          isInFailSafe                  = false;   
-    static bool          isInFailSafe_previous         = false;   
+    static bool          isArmed_previous             = true;
+    static bool          isInFailSafe_local           = false;   
+    static bool          isInFailSafe_local_previous  = false;   
     static unsigned long failSafeMotorDecelarationLoopCount = 0;
     static float         failSafeMotorDecelarationStep = 0.0;
     static int           failSafePwmThrottleValue = 0;
@@ -119,11 +125,8 @@ void loop() {
     myFc.set_arm_IsArmed(myFc.get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)); //Dans certains cas, on ne permet pas d'armer
     myFc.set_black_box_IsEnabled(myFc.get_IsStickInPosition(GPF_RC_STICK_BLACK_BOX, GPF_RC_CHANNEL_POSITION_HIGH));
 
-    if (myFc.get_IsStickInPosition(GPF_RC_STICK_FLIGHT_MODE, GPF_RC_CHANNEL_POSITION_HIGH)) {
-     myFc.myImu.fusion_type = GPF_IMU_FUSION_TYPE_MADGWICK;
-    } else {
-     myFc.myImu.fusion_type = GPF_IMU_FUSION_TYPE_COMPLEMENTARY_FILTER;
-    }
+    myFc.get_set_flightMode();
+    myFc.myImu.set_fusion_type(myFc.flight_mode);
 
     if (myFc.myImu.getIMUData()) { //Armé ou non, on va toujours lire le IMU
       myFc.myImu.doFusion(); //Madwick ou Complementary filder selon la position de la switch mode de vol.
@@ -143,10 +146,49 @@ void loop() {
         //On était pas armé le tour d'avant donc on pourrait faire un traitement spécial vue qu'on vient tout juste d'armer        
         myFc.displayArmed();
 
+        myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(gpf_util_get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US,true));
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->println("Arm");
+
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->println("Kp_roll_angle,Ki_roll_angle,Kd_roll_angle,Kp_pitch_angle,Ki_pitch_angle,Kd_pitch_angle,Kp_yaw,Ki_yaw,Kd_yaw,GPF_IMU_FUSION_WEIGHT_GYRO_COMPLEMENTARY_FILTER,B_madgwick,B_accel,B_gyro");
+
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_ROLL][GPF_PID_TERM_PROPORTIONAL]  / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_ROLL][GPF_PID_TERM_INTEGRAL]      / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_ROLL][GPF_PID_TERM_DERIVATIVE]    / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_PITCH][GPF_PID_TERM_PROPORTIONAL] / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_PITCH][GPF_PID_TERM_INTEGRAL]     / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_PITCH][GPF_PID_TERM_DERIVATIVE]   / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_YAW][GPF_PID_TERM_PROPORTIONAL]   / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_YAW][GPF_PID_TERM_INTEGRAL]       / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myConfig.pids[GPF_AXE_YAW][GPF_PID_TERM_DERIVATIVE]     / GPF_PID_STORAGE_MULTIPLIER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(GPF_IMU_FUSION_WEIGHT_GYRO_COMPLEMENTARY_FILTER,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myFc.myImu.B_madgwick,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myFc.myImu.B_accel,6);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(myFc.myImu.B_gyro,6);
+        //myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(",");
+
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->println("");
+        myFc.mySdCard.closeFile(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG);
+
         if (myFc.get_black_box_IsEnabled()) {
-         //myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
-         //myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myFc.get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_LOGGING,true));
-         //myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->println("Armed");
+         myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
+         myFc.black_box_writeHeader();
         }
         myFc.resetLoopStats();
 
@@ -156,10 +198,10 @@ void loop() {
       myFc.scaleCommands();   //Scales motor commands to DSHOT commands
 
       //Sécurité - Fail Safe
-      isInFailSafe_previous = isInFailSafe;
-      isInFailSafe = myFc.myRc.get_isInFailSafe();
+      isInFailSafe_local_previous = isInFailSafe_local;
+      isInFailSafe_local = myFc.myRc.get_isInFailSafe();
 
-      if (isInFailSafe) {
+      if (isInFailSafe_local) {
        //if ((dummyCpt % 250) == 0) {
        // DEBUG_GPF_PRINTLN("isInFailSafe=oui"); 
        //}
@@ -168,7 +210,7 @@ void loop() {
        // stabiliser. Cependant pendant 5 secondes, je force le throttle à diminuer jusqu'à 0.
        // Todo: Ajouter condition avec lidar si distance avec le sol est plus petite que 0.5 mètre environ.
  
-       if (!isInFailSafe_previous) { //On entre en failSafe 
+       if (!isInFailSafe_local_previous) { //On entre en failSafe 
          failSafeMotorDecelarationLoopCount = 0;
 
          //Faudrait peut-être pas mettre tous les channels à 1500 genre Throttle, ARM et mode de vol, etc...
@@ -211,6 +253,10 @@ void loop() {
        myFc.myDshot.sendCommand(motorNumber, myFc.motor_command_DSHOT[motorNumber], false);
       }
 
+      if (myFc.get_black_box_IsEnabled()) {       
+       myFc.black_box_writeRow();
+      }
+
     } else {
       //Si pas armé, et bien on affiche le menu sur l'écran tactile.
       
@@ -224,9 +270,14 @@ void loop() {
           myFc.myDshot.sendCommand(motorNumber, myFc.motor_command_DSHOT[motorNumber], false);
         }
 
-        if (myFc.get_black_box_IsEnabled()) {
-         //myFc.mySdCard.closeFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
-        }
+        //if (myFc.get_black_box_IsEnabled()) {
+         myFc.mySdCard.closeFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
+        //}
+
+        myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG);
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->print(gpf_util_get_dateTimeString(GPF_MISC_FORMAT_DATE_TIME_FRIENDLY_US,true));
+        myFc.mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG)->println("Desarm");
+        myFc.mySdCard.closeFile(GPF_SDCARD_FILE_TYPE_INFORMATION_LOG);
 
         myFc.resetLoopStats();
         myFc.menu_pleaseRefresh = true;
@@ -237,6 +288,7 @@ void loop() {
     }
 
     myFc.manageAlarms();    
+    myFc.myMusicPlayer.updatePlaying(myFc.myRc.getPwmChannelValue(myConfig.channelMaps[GPF_RC_STICK_MUSIC_PLAYER_VOLUME]), myFc.myRc.getPwmChannelValue(myConfig.channelMaps[GPF_RC_STICK_MUSIC_PLAYER_TRACK]), myFc.myRc.getPwmChannelValue(myConfig.channelMaps[GPF_RC_STICK_MUSIC_PLAYER_LIST]));
 }
 
 
