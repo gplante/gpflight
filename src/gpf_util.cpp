@@ -265,3 +265,13 @@ char* gpf_util_get_dateTimeString(uint8_t format, bool addSpace) {
    return gpf_util_dateTimeString;
 }
 
+uint16_t  gpf_util_getVoltage() { 
+ const uint16_t CALIBRATION_ADC = 12; 
+ const float    CALIBRATION_VAL_PER_DECIVOLT = 5.48823;
+
+ uint16_t voltage = floor((constrain(analogRead(PIN_A8),0,1023) - CALIBRATION_ADC) / CALIBRATION_VAL_PER_DECIVOLT);
+ 
+ //Return un entier. Ex.: 1=0.1v, 168=16.8v
+ return voltage;
+
+}

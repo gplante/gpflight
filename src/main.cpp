@@ -44,7 +44,8 @@ void setup() {
   
   pinMode(LED_BUILTIN, OUTPUT); // initialize LED digital pin as an output. // Attention, la LED_BUILTIN (pin 13) est la même pin que le SPI SCK sur un Teensy 4.1
   pinMode(GPF_MISC_PIN_BUZZER, OUTPUT); // buzzer/piezo
-  
+  pinMode(PIN_A8, INPUT) ;//Diviseur de tension pour lecture du voltage de la batterie sur la pin A8. Voir fonction gpf_util_getVoltage();
+
   gpf_util_blinkMainBoardLed(3);
   Serial.begin(115200);  //Port USB //C'est long genre 2 secondes ???
   sinceDummy = 0;
@@ -54,6 +55,11 @@ void setup() {
   DEBUG_GPF_PRINTLN(GPF_MISC_PROG_CURRENT_VERSION);    
   
   gpf_util_blinkMainBoardLed(2);
+
+  //while (1) {
+  //  DEBUG_GPF_PRINTLN(gpf_util_getVoltage());
+  //  delay(500);
+  //}
 
   //Config eeprom
   EEPROM.get(0, myConfig); 
@@ -90,7 +96,9 @@ void setup() {
   //Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
   
   myFc.initialize(&myConfig);
-  myFc.genDummyTelemetryData(); //Pour fin de tests
+
+  //myFc.genDummyTelemetryData(); //Pour fin de tests
+  strncpy(myFc.gpf_telemetry_info.flight_mode_description, "GPFlight :-)", GPF_UTIL_FLIGHT_MODE_DESCRIPTION_MAX_LENGTH);
   
   //myFc.mySdCard.openFile(GPF_SDCARD_FILE_TYPE_BLACK_BOX);
   DEBUG_GPF_PRINTLN("*******************************************");    
@@ -120,6 +128,9 @@ void loop() {
 
     myFc.iAmStartingLoopNow(true);
     myFc.debugDisplayLoopStats();
+
+    myFc.gpf_telemetry_info.battery_voltage = gpf_util_getVoltage(); 
+    
     myFc.myRc.readRx(); //Armé ou non, on va toujours lire la position des sticks
 
     myFc.set_arm_IsArmed(myFc.get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)); //Dans certains cas, on ne permet pas d'armer

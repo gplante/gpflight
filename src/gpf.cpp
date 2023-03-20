@@ -506,13 +506,18 @@ void GPF::get_set_flightMode() {
   
   if (get_IsStickInPosition(GPF_RC_STICK_FLIGHT_MODE, GPF_RC_CHANNEL_POSITION_HIGH)) {
     flight_mode = GPF_FLIGHT_MODE_3_FUSION_TYPE_MADGWICK;
+    strncpy(gpf_telemetry_info.flight_mode_description, "GPF Madgwick", GPF_UTIL_FLIGHT_MODE_DESCRIPTION_MAX_LENGTH);
   } else {
     if (get_IsStickInPosition(GPF_RC_STICK_FLIGHT_MODE, GPF_RC_CHANNEL_POSITION_MID)) {
       flight_mode = GPF_FLIGHT_MODE_2_FUSION_TYPE_COMPLEMENTARY_FILTER;
+      strncpy(gpf_telemetry_info.flight_mode_description, "GPF Complemen", GPF_UTIL_FLIGHT_MODE_DESCRIPTION_MAX_LENGTH);
     } else {
       flight_mode = GPF_FLIGHT_MODE_1_EQUAL_THROTTLE_FOR_TESTS_ONLY;
+      strncpy(gpf_telemetry_info.flight_mode_description, "GPF **TEST**", GPF_UTIL_FLIGHT_MODE_DESCRIPTION_MAX_LENGTH);
     }
   }
+
+  
 
 }
 
