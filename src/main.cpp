@@ -93,7 +93,8 @@ void setup() {
 
   Wire.begin();           //La librairie I2Cdev en a besoin
   Wire.setClock(1000000); //Important pour pouvoir une loop à 2khz // Note this is 2.5 times the spec sheet 400 kHz max...
-  //Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
+  //Wire.setClock(800000); //Important pour pouvoir une loop à 2khz // Note this is 2.5 times the spec sheet 400 kHz max...
+  Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
   
   myFc.initialize(&myConfig);
 
@@ -132,10 +133,8 @@ void loop() {
     myFc.gpf_telemetry_info.battery_voltage = gpf_util_getVoltage(); 
     
     myFc.myRc.readRx(); //Armé ou non, on va toujours lire la position des sticks
-
     myFc.set_arm_IsArmed(myFc.get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)); //Dans certains cas, on ne permet pas d'armer
     myFc.set_black_box_IsEnabled(myFc.get_IsStickInPosition(GPF_RC_STICK_BLACK_BOX, GPF_RC_CHANNEL_POSITION_HIGH));
-
     myFc.get_set_flightMode();
     myFc.myImu.set_fusion_type(myFc.flight_mode);
 
@@ -294,6 +293,7 @@ void loop() {
         myFc.menu_pleaseRefresh = true;
       }
 
+      myFc.update_arm_allowArming(); //Call cette fonction seulement lorsque désarmé sinon on ne pourra jamais armer. //Anyway, si on est armé on a plus besoin de savoir si on peut armer.
       myFc.displayAndProcessMenu();
 
     }

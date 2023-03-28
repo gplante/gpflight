@@ -110,8 +110,8 @@ void GPF::debugDisplayLoopStats() {
    DEBUG_GPF_PRINT(get_arm_IsArmed());
    DEBUG_GPF_PRINT(" arm_allowArming=");
    DEBUG_GPF_PRINT(arm_allowArming);
-   DEBUG_GPF_PRINT(" get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)=");
-   DEBUG_GPF_PRINT(get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
+   DEBUG_GPF_PRINT(" wasArmedAtLeastOnce=");
+   DEBUG_GPF_PRINT(wasArmedAtLeastOnce);
 
    DEBUG_GPF_PRINTLN();
 
@@ -271,6 +271,36 @@ bool GPF::get_IsStickInPosition(uint8_t stick, gpf_rc_channel_position_type_enum
   return retour;
 }
 
+void GPF::update_arm_allowArming() { 
+  //Cette fonction doit être appelée seulement lorsque désarmé sinon on ne pourra jamais armer.
+  //Anyway, si on est armé on a plus besoin de savoir si on peut armer.
+
+  bool firstTimeConditionOk = false;
+
+  //La premère fois (et seulement la première fois) qu'on désire armer après la démarrage du contrôleur de vol (du Teensy en fait),
+  //on oblige le pilote à Mettre le throttle à 0 (1001 c'est pas tout à fait 0 mais bon, je me garde une minuscule marge) et simultanément 
+  //que la swith arm ne soit pas déjà en position armée.
+
+  if (!wasArmedAtLeastOnce) {
+   firstTimeConditionOk = ( (myRc.getPwmChannelPos(myConfig_ptr->channelMaps[GPF_RC_STICK_THROTTLE]) < 1001) &&
+                            (!get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)) 
+                          );
+  } else {
+    firstTimeConditionOk = true;
+  }
+  
+  // Quand on consulte/modifi la config via l'écran tactile, par sécurité (car on a le visage proche des hélices) on ne permet pas 
+  // d'armer les moteurs sauf si 
+  // 1) On est au menu principal 
+  // 2) et que la switch Arm est présentement à l'état Désarmé 
+  // 3) et que la condition firstTimeConditionOk soit rencontré (la première fois qu'on démarre le Teensy)
+  arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) &&
+                    (!get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)) &&
+                    firstTimeConditionOk;  
+                    
+  return;
+}
+
 bool GPF::get_arm_IsArmed() {    
   return arm_isArmed;
 }
@@ -279,12 +309,15 @@ bool GPF::set_arm_IsArmed(bool b) {
   bool arm_isArmed_old = arm_isArmed;
 
   arm_isArmed = b && arm_allowArming;
-
-  //todo checkey aussi d'autres conditions comme par exemple si IMU fonctionne bien ???
   
+  if (arm_isArmed) {
+   wasArmedAtLeastOnce = true;
+  }
+
   if (arm_isArmed != arm_isArmed_old) {
    arm_isArmed_sinceChange = 0;
   }
+
   return arm_isArmed;
 }
 
@@ -374,6 +407,7 @@ void GPF::black_box_writeHeader() {
        //Autre
        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("flight_mode,");      
        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("get_isInFailSafe,"); 
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print("Imu_errorCount,"); 
 
        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->println("end");
 
@@ -497,6 +531,8 @@ void GPF::black_box_writeRow() {
         mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myRc.get_isInFailSafe());
         mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");      
+       mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(myImu.errorCount);
+        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->print(",");       
 
        mySdCard.getFileObject(GPF_SDCARD_FILE_TYPE_BLACK_BOX)->println("end");
   
@@ -827,8 +863,8 @@ void GPF::displayAndProcessMenu() {
   
   // Quand on consulte/modifi la config via l'écran tactile, par sécurité (car on a le visage proche des hélices) on ne permet pas 
   // d'armer les moteurs sauf si on est au menu principal et que la switch Arm est présentement à l'état Désarmé.
-  arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) && (!get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
-  
+  //arm_allowArming = (menu_current == GPF_MENU_MAIN_MENU) && (!get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));
+  //update_arm_allowArming(); 
   /*
   DEBUG_GPF_PRINT(" get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH)=");
   DEBUG_GPF_PRINTLN(get_IsStickInPosition(GPF_RC_STICK_ARM, GPF_RC_CHANNEL_POSITION_HIGH));

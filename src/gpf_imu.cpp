@@ -29,6 +29,12 @@ void GPF_IMU::initialize(gpf_config_struct *ptr) {
     theImu.setFullScaleGyroRange(GPF_IMU_GYRO_SCALE);
     theImu.setFullScaleAccelRange(GPF_IMU_ACCEL_SCALE);
     theImu.setRate(7);
+
+    //Serial.print("theImu.getDMPEnabled()=");
+    //Serial.println(theImu.getDMPEnabled());
+
+    //Serial.print("theImu.getDLPFMode(), HEX=");
+    //Serial.println(theImu.getDLPFMode(), HEX);
     
     #ifdef DEBUG_GPF_IMU_ENABLED
      

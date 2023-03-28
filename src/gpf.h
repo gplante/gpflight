@@ -47,6 +47,7 @@ class GPF {
         void scaleCommands();
         
         bool get_IsStickInPosition(uint8_t stick, gpf_rc_channel_position_type_enum channel_position_required);
+        void update_arm_allowArming();
         bool get_arm_IsArmed();
         bool set_arm_IsArmed(bool);
         bool get_black_box_IsEnabled();
@@ -137,7 +138,7 @@ class GPF {
         gpf_config_struct *myConfig_ptr = NULL;
         bool          arm_isArmed = false;
         elapsedMillis arm_isArmed_sinceChange;
-        //bool          arm_pleaseDesarmFirst = true;
+        bool          wasArmedAtLeastOnce = false;
         bool          arm_allowArming     = false;
         bool          black_box_isEnabled = false;
         
