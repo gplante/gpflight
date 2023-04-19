@@ -91,11 +91,19 @@ void setup() {
   }
   // Fin Date/Heure
 
-  Wire.begin();           //La librairie I2Cdev en a besoin
-  Wire.setClock(1000000); //Important pour pouvoir une loop à 2khz // Note this is 2.5 times the spec sheet 400 kHz max...
-  //Wire.setClock(800000); //Important pour pouvoir une loop à 2khz // Note this is 2.5 times the spec sheet 400 kHz max...
-  Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
-  
+  #if defined GPF_IMU_SENSOR_INSTALLED_MPU6050 
+   Wire.begin();           //La librairie I2Cdev ne l'initialise pas donc on doit le faire nous même
+   Wire.setClock(1000000); //Important pour pouvoir une loop à 2khz // Note this is 2.5 times the spec sheet 400 kHz max...
+   //Wire.setClock(800000); //Important pour pouvoir une loop à 2khz // Note this is 2.5 times the spec sheet 400 kHz max...
+   //Wire.setClock(400000); //Important pour pouvoir une loop à 2khz // Note this is 2.5 times the spec sheet 400 kHz max...
+   //Wire.setTimeout(3000); //test //On dirait moins d'erreur sur le MPU6050 avec celà... ??? Non finalement je pense ... Mettre AD0 de MPU6050 au ground...
+  #endif
+
+  #if defined GPF_IMU_SENSOR_INSTALLED_BMI088
+    //La vitesse se fait initialiser à 400 kHz par la librairie bmi088
+    //J'ai tenté de changer le code de la librairie bmi088 pour augmenter la vitesse mais ca ne va pas plus vite ???
+  #endif
+
   myFc.initialize(&myConfig);
 
   //myFc.genDummyTelemetryData(); //Pour fin de tests

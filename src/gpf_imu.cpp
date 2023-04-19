@@ -13,6 +13,7 @@
 #include <math.h>
 #include "I2Cdev.h"
 #include "MPU6050.h"
+#include "BMI088.h"
 #include "gpf_imu.h"
 #include "gpf_util.h"
 #include "gpf_debug.h"
@@ -23,42 +24,95 @@ GPF_IMU::GPF_IMU() {
 
 void GPF_IMU::initialize(gpf_config_struct *ptr) {
     myConfig_ptr = ptr;
-    theImu.initialize();
-    delay(5); //delay(1); //Patch pour IMU de type GY-521 sinon setFullScaleAccelRange() n'est pas pris en considération ci-dessous et reste à MPU6050_ACCEL_FS_2
 
-    theImu.setFullScaleGyroRange(GPF_IMU_GYRO_SCALE);
-    theImu.setFullScaleAccelRange(GPF_IMU_ACCEL_SCALE);
-    theImu.setRate(7);
+    #if defined GPF_IMU_SENSOR_INSTALLED_MPU6050
+     theImu_mpu6050.initialize();
+     delay(5); //delay(1); //Patch pour IMU de type GY-521 sinon setFullScaleAccelRange() n'est pas pris en considération ci-dessous et reste à MPU6050_ACCEL_FS_2
 
-    //Serial.print("theImu.getDMPEnabled()=");
-    //Serial.println(theImu.getDMPEnabled());
+     theImu_mpu6050.setFullScaleGyroRange(GPF_IMU_MPU6050_GYRO_SCALE);
+     theImu_mpu6050.setFullScaleAccelRange(GPF_IMU_MPU6050_ACCEL_SCALE);
+     theImu_mpu6050.setRate(7);
 
-    //Serial.print("theImu.getDLPFMode(), HEX=");
-    //Serial.println(theImu.getDLPFMode(), HEX);
-    
-    #ifdef DEBUG_GPF_IMU_ENABLED
+     #ifdef DEBUG_GPF_IMU_ENABLED
      
       DEBUG_GPF_IMU_PRINT(F("IMU:"));
       DEBUG_GPF_IMU_PRINT(F("getDeviceID(): hex:"));
-      DEBUG_GPF_IMU_PRINT(theImu.getDeviceID(), HEX);      
+      DEBUG_GPF_IMU_PRINT(theImu_mpu6050.getDeviceID(), HEX);      
       DEBUG_GPF_IMU_PRINTLN();
       
       DEBUG_GPF_IMU_PRINT(F("IMU:"));
       DEBUG_GPF_IMU_PRINT(F("getDLPFMode(): hex:"));
-      DEBUG_GPF_IMU_PRINT(theImu.getDLPFMode(), HEX);      
+      DEBUG_GPF_IMU_PRINT(theImu_mpu6050.getDLPFMode(), HEX);      
       DEBUG_GPF_IMU_PRINTLN();
 
       DEBUG_GPF_IMU_PRINT(F("IMU:"));
       DEBUG_GPF_IMU_PRINT(F("getRate(): hex:"));
-      DEBUG_GPF_IMU_PRINT(theImu.getRate(), HEX);      
+      DEBUG_GPF_IMU_PRINT(theImu_mpu6050.getRate(), HEX);      
       DEBUG_GPF_IMU_PRINTLN();
 
       //DEBUG_GPF_IMU_PRINT(F("IMU:"));
       //DEBUG_GPF_IMU_PRINT(F("getFIFOEnabled(): hex:"));
-      //DEBUG_GPF_IMU_PRINT(theImu.getFIFOEnabled(), HEX);     
+      //DEBUG_GPF_IMU_PRINT(theImu_mpu6050.getFIFOEnabled(), HEX);     
       //DEBUG_GPF_IMU_PRINTLN();
      
+     #endif
     #endif
+
+    #if defined GPF_IMU_SENSOR_INSTALLED_BMI088
+     int  status_i;
+     bool status_b;
+
+      #if defined GPF_IMU_SENSOR_INSTALLED_BMI088_A
+       theImu_bmi088_accel = new Bmi088Accel(Wire,0x19); //0x18
+       theImu_bmi088_gyro  = new Bmi088Gyro(Wire,0x69); //0x68
+
+       status_i = theImu_bmi088_accel->begin();
+       status_b = theImu_bmi088_accel->setOdr(Bmi088Accel::ODR_1600HZ_BW_280HZ);
+       status_b = theImu_bmi088_accel->setRange(GPF_IMU_BMI088_ACCEL_SCALE); //Bmi088Accel::RANGE_3G
+
+       if (status_i < 0) {
+         #ifdef DEBUG_GPF_IMU_ENABLED
+          DEBUG_GPF_IMU_PRINT("Accel Initialization Error");
+          DEBUG_GPF_IMU_PRINTLN(status_i);      
+         #endif
+       }
+
+       status_i = theImu_bmi088_gyro->begin();
+       if (status_i < 0) {
+         #ifdef DEBUG_GPF_IMU_ENABLED
+          DEBUG_GPF_IMU_PRINT("Gyro Initialization Error");
+          DEBUG_GPF_IMU_PRINTLN(status_i);      
+         #endif
+       }
+
+       status_b = theImu_bmi088_gyro->setOdr(Bmi088Gyro::ODR_2000HZ_BW_532HZ);
+       status_b = theImu_bmi088_gyro->setRange(GPF_IMU_BMI088_GYRO_SCALE); //Bmi088Gyro::RANGE_500DPS
+
+       if (status_b) {
+        #ifdef DEBUG_GPF_IMU_ENABLED
+          DEBUG_GPF_IMU_PRINT("status_b=");
+          DEBUG_GPF_IMU_PRINTLN(status_b);      
+        #endif
+       }
+      #endif
+
+      #if defined GPF_IMU_SENSOR_INSTALLED_BMI088_B //Pour fin de tests seulement
+       theImu_bmi088_bmi = new Bmi088(Wire,0x19,0x69);
+
+       status_i = theImu_bmi088_bmi->begin();
+       status_b = theImu_bmi088_bmi->setOdr(Bmi088::ODR_2000HZ);
+       status_b = theImu_bmi088_bmi->setRange(Bmi088::ACCEL_RANGE_3G,Bmi088::GYRO_RANGE_500DPS);
+
+       if (status_i < 0) {
+        #ifdef DEBUG_GPF_IMU_ENABLED
+         DEBUG_GPF_IMU_PRINT("Bmi Initialization Error");
+         DEBUG_GPF_IMU_PRINTLN(status_i);      
+        #endif
+       }
+      #endif
+    
+    #endif
+    
 }
 
 
@@ -84,16 +138,34 @@ bool GPF_IMU::getIMUData() {
     gyrY_raw_no_offsets = 0;
     gyrZ_raw_no_offsets = 0;
 
-    theImu.getMotion6(&accX_raw_no_offsets, &accY_raw_no_offsets, &accZ_raw_no_offsets, &gyrX_raw_no_offsets, &gyrY_raw_no_offsets, &gyrZ_raw_no_offsets);
+    #if defined GPF_IMU_SENSOR_INSTALLED_MPU6050
+     theImu_mpu6050.getMotion6(&accX_raw_no_offsets, &accY_raw_no_offsets, &accZ_raw_no_offsets, &gyrX_raw_no_offsets, &gyrY_raw_no_offsets, &gyrZ_raw_no_offsets);
+    #endif
+
+    #if defined GPF_IMU_SENSOR_INSTALLED_BMI088
+     #if defined GPF_IMU_SENSOR_INSTALLED_BMI088_A
+       theImu_bmi088_accel->readSensor();
+       theImu_bmi088_accel->getSensorRawValues(&accX_raw_no_offsets, &accY_raw_no_offsets, &accZ_raw_no_offsets);
+       theImu_bmi088_gyro->readSensor();
+       theImu_bmi088_gyro->getSensorRawValues(&gyrX_raw_no_offsets, &gyrY_raw_no_offsets, &gyrZ_raw_no_offsets);
+     #endif
+
+     #if defined GPF_IMU_SENSOR_INSTALLED_BMI088_B
+      theImu_bmi088_bmi->readSensor();
+      theImu_bmi088_bmi->getSensorRawValues(&accX_raw_no_offsets, &accY_raw_no_offsets, &accZ_raw_no_offsets, &gyrX_raw_no_offsets, &gyrY_raw_no_offsets, &gyrZ_raw_no_offsets);
+     #endif
+    #endif
     
     // *** Protection *** 
     //Protection si on ne peu pas lire le IMU. C'est mieux de sortir de la fonction que de faire des calculs erronés
-    if(((accX_raw_no_offsets == 0) && (accY_raw_no_offsets == 0) && (accZ_raw_no_offsets == 0)) || ((gyrX_raw_no_offsets == 0) && (gyrY_raw_no_offsets == 0) && (gyrZ_raw_no_offsets == 0))) {
-      DEBUG_GPF_IMU_PRINT(F("GPF_IMU:"));
-      DEBUG_GPF_IMU_PRINTLN(F("***** ERREUR (Valeurs à 0) ******"));
-      errorCount++;
-      return false;
-    }
+    #if defined GPF_IMU_SENSOR_INSTALLED_MPU6050
+     if(((accX_raw_no_offsets == 0) && (accY_raw_no_offsets == 0) && (accZ_raw_no_offsets == 0)) || ((gyrX_raw_no_offsets == 0) && (gyrY_raw_no_offsets == 0) && (gyrZ_raw_no_offsets == 0))) {
+       DEBUG_GPF_IMU_PRINT(F("GPF_IMU:"));
+       DEBUG_GPF_IMU_PRINTLN(F("***** ERREUR (Valeurs à 0) ******"));
+       errorCount++;
+       return false;
+     }
+    #endif
 
     // **************************************************************************************
     // On dirait que des fois, la fonction getMotion6() retournait des valeurs à 0 puis ensuite les calculs donnaient comme résultat Nan.
@@ -551,7 +623,24 @@ void GPF_IMU::meansensors() {
 
    while (i<(calibration_buffersize+101)) {
     // read raw accel/gyro measurements from device
-    theImu.getMotion6(&accX_raw_no_offsets, &accY_raw_no_offsets, &accZ_raw_no_offsets, &gyrX_raw_no_offsets, &gyrY_raw_no_offsets, &gyrZ_raw_no_offsets);
+
+    #if defined GPF_IMU_SENSOR_INSTALLED_MPU6050
+     theImu_mpu6050.getMotion6(&accX_raw_no_offsets, &accY_raw_no_offsets, &accZ_raw_no_offsets, &gyrX_raw_no_offsets, &gyrY_raw_no_offsets, &gyrZ_raw_no_offsets);
+    #endif    
+
+    #if defined GPF_IMU_SENSOR_INSTALLED_BMI088
+     #if defined GPF_IMU_SENSOR_INSTALLED_BMI088_A
+       theImu_bmi088_accel->readSensor();
+       theImu_bmi088_accel->getSensorRawValues(&accX_raw_no_offsets, &accY_raw_no_offsets, &accZ_raw_no_offsets);
+       theImu_bmi088_gyro->readSensor();
+       theImu_bmi088_gyro->getSensorRawValues(&gyrX_raw_no_offsets, &gyrY_raw_no_offsets, &gyrZ_raw_no_offsets);
+     #endif
+
+     #if defined GPF_IMU_SENSOR_INSTALLED_BMI088_B
+      theImu_bmi088_bmi->readSensor();
+      theImu_bmi088_bmi->getSensorRawValues(&accX_raw_no_offsets, &accY_raw_no_offsets, &accZ_raw_no_offsets, &gyrX_raw_no_offsets, &gyrY_raw_no_offsets, &gyrZ_raw_no_offsets);
+     #endif
+    #endif
     
     if (i>100 && i<=(calibration_buffersize+100)){ //First 100 measures are discarded
       buff_ax=buff_ax+accX_raw_no_offsets;

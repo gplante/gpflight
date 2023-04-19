@@ -183,7 +183,7 @@ typedef enum {
 
 } gpf_rc_channel_position_type_enum;
 
-#define GPF_MAIN_LOOP_RATE             500 //1000 //500 //us (250=4000hz, 500=2000hz, 1000=1000hz, 2000=500hz, ...) //Maximum atteignable d'environ 6000hz avec un Teensy 4.1
+#define GPF_MAIN_LOOP_RATE             1000 //500 //1000 //500 //us (250=4000hz, 500=2000hz, 1000=1000hz, 2000=500hz, ...) //Maximum atteignable d'environ 6000hz avec un Teensy 4.1
 #define GPF_MAIN_LED_TOGGLE_DURATION   500 //ms
 #define GPF_BLACK_BOX_RATE             5000 //ms //0 = on log tous le temps à chaque tour de loop
 
