@@ -28,7 +28,7 @@ Haut-parleurs: AIYIMA 2" 10W 4 Ohm
 <br />
 <br />
 <br />
-30 avril 2023: J'ai fait mon premier test extérieur avec un drone que j'ai construit d'environ 770mm et des hélices de 12 pouces.
+29 avril 2023: J'ai fait mon premier test extérieur avec un drone que j'ai construit d'environ 770mm et des hélices de 12 pouces.
 <br />
 https://youtu.be/wTCoblbzLhY
 <br />
