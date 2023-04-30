@@ -68,7 +68,7 @@ void GPF_IMU::initialize(gpf_config_struct *ptr) {
 
        status_i = theImu_bmi088_accel->begin();
        status_b = theImu_bmi088_accel->setOdr(Bmi088Accel::ODR_1600HZ_BW_280HZ);
-       status_b = theImu_bmi088_accel->setRange(GPF_IMU_BMI088_ACCEL_SCALE); //Bmi088Accel::RANGE_3G
+       status_b = theImu_bmi088_accel->setRange(GPF_IMU_BMI088_ACCEL_SCALE);
 
        if (status_i < 0) {
          #ifdef DEBUG_GPF_IMU_ENABLED
@@ -86,7 +86,7 @@ void GPF_IMU::initialize(gpf_config_struct *ptr) {
        }
 
        status_b = theImu_bmi088_gyro->setOdr(Bmi088Gyro::ODR_2000HZ_BW_532HZ);
-       status_b = theImu_bmi088_gyro->setRange(GPF_IMU_BMI088_GYRO_SCALE); //Bmi088Gyro::RANGE_500DPS
+       status_b = theImu_bmi088_gyro->setRange(GPF_IMU_BMI088_GYRO_SCALE); 
 
        if (status_b) {
         #ifdef DEBUG_GPF_IMU_ENABLED

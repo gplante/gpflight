@@ -147,7 +147,7 @@ void loop() {
     myFc.myImu.set_fusion_type(myFc.flight_mode);
 
     if (myFc.myImu.getIMUData()) { //Armé ou non, on va toujours lire le IMU
-      myFc.myImu.doFusion(); //Madwick ou Complementary filder selon la position de la switch mode de vol.
+      myFc.myImu.doFusion(); //Madwick ou Complementary filter selon la position de la switch mode de vol.
     }
 
     myFc.getDesiredState(); //Compute desired state //Convert raw commands to normalized values based on saturated control limits

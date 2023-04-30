@@ -39,6 +39,7 @@
 //#define GPF_IMU_MPU6050_GYRO_1000DPS //Très vache ???
 //#define GPF_IMU_MPU6050_GYRO_2000DPS
 
+
 //BMI088 Accel                                                                             ***Choisir seulement 1***
 //Uncomment only one full scale accelerometer range (G's)
 #define GPF_IMU_BMI088_ACCEL_3G //Default
