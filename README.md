@@ -33,6 +33,11 @@ Note: Je peux directement changer certaines configurations via l'écran tactile,
 <br />
 <br />
 <br />
+21 mars 2023: Quelques tests préliminaires une fois tout assemblé.
+<br />
+https://youtu.be/39_GrKONNGU
+<br />
+<br />
 29 avril 2023: J'ai fait mon premier test extérieur avec un drone que j'ai construit d'environ 770mm et des hélices de 12 pouces.
 <br />
 https://youtu.be/wTCoblbzLhY
